@@ -13,9 +13,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Fetch the top 10 scores for a specific gamemode
+    // Fetch the top 10 scores for a specific gamemode, now including gamemode and datetime
     const { rows } = await sql`
-      SELECT id, name, score
+      SELECT id, name, score, gamemode, datetime
       FROM leaderboard
       WHERE gamemode = ${gamemode} AND name IS NOT NULL
       ORDER BY score DESC

@@ -1,3 +1,4 @@
+// app/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,7 +10,8 @@ interface Score {
   id: number;
   name: string;
   score: number;
-  // 'initials' will be derived from 'name'
+  gamemode: string;
+  datetime: string; // This will be a string from the API
 }
 
 // Define the structure for a game mode from your API
@@ -50,16 +52,6 @@ const ArcadeLeaderboard = () => {
         return () => clearTimeout(timer);
     }
   }, [selectedGame]);
-
-
-  const getRankIcon = (rank: number) => {
-    switch(rank) {
-      case 1: return <Crown className="w-6 h-6 text-yellow-400" />;
-      case 2: return <Medal className="w-6 h-6 text-gray-300" />;
-      case 3: return <Award className="w-6 h-6 text-amber-600" />;
-      default: return <Star className="w-5 h-5 text-purple-400" />;
-    }
-  };
 
   const getRankColor = (rank: number) => {
     switch(rank) {
@@ -136,10 +128,10 @@ const ArcadeLeaderboard = () => {
           {/* Leaderboard Header - Updated Layout */}
           <div className="grid grid-cols-12 gap-4 mb-4 text-cyan-300 font-bold text-sm uppercase tracking-wider border-b border-cyan-500/30 pb-2">
             <div className="col-span-1 text-center">RANK</div>
-            <div className="col-span-1 text-center">INIT</div>
-            <div className="col-span-7">PLAYER</div>
+            <div className="col-span-4">PLAYER</div>
             <div className="col-span-2 text-right">SCORE</div>
-            <div className="col-span-1 text-center">BADGE</div>
+            <div className="col-span-2 text-center">GAMEMODE</div>
+            <div className="col-span-3 text-center">DATE ACHIEVED</div>
           </div>
 
           {/* Leaderboard Entries */}
@@ -155,17 +147,17 @@ const ArcadeLeaderboard = () => {
                 <div className="col-span-1 text-center font-bold text-2xl">
                   #{index + 1}
                 </div>
-                <div className="col-span-1 text-center font-mono text-lg font-bold bg-black/30 rounded px-2 py-1">
-                  {entry.name.substring(0, 3).toUpperCase()}
-                </div>
-                <div className="col-span-7 font-mono text-lg font-bold">
+                <div className="col-span-4 font-mono text-lg font-bold">
                   {entry.name}
                 </div>
                 <div className="col-span-2 text-right font-mono text-xl font-bold">
                   {entry.score.toLocaleString()}
                 </div>
-                <div className="col-span-1 text-center">
-                  {getRankIcon(index + 1)}
+                <div className="col-span-2 text-center font-mono text-sm">
+                  {entry.gamemode}
+                </div>
+                <div className="col-span-3 text-center font-mono text-sm">
+                  {new Date(entry.datetime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                 </div>
               </div>
             )) : <div className="text-center text-gray-400 py-8">Loading scores...</div>}
@@ -186,7 +178,7 @@ const ArcadeLeaderboard = () => {
           </div>
         </div>
 
-        {/* Additional Info Panel - Kept your original 2-panel layout as 'level' is not in the API data */}
+        {/* Additional Info Panel */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-black/30 backdrop-blur-sm rounded-lg border border-purple-500/30 p-4 text-center">
             <div className="text-purple-400 text-2xl font-bold">
