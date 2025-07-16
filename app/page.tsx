@@ -19,11 +19,18 @@ interface PendingScore {
   gamemode: string;
 }
 
+// Define the structure for a game mode object
+interface GameMode {
+    id: number;
+    name: string;
+    icon?: string; // Optional icon property
+}
+
 // Fetcher function for useSWR
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function LeaderboardPage() {
-  // State for the selected game mode
+  // State for the selected game mode name
   const [selectedGamemode, setSelectedGamemode] = useState('Classic');
   // State for the user's input name
   const [inputName, setInputName] = useState('');
@@ -32,8 +39,8 @@ export default function LeaderboardPage() {
   // State to hold information about a score pending a name
   const [pendingScore, setPendingScore] = useState<PendingScore | null>(null);
   
-  // Fetch available game modes
-  const { data: gamemodes, error: gamemodesError } = useSWR<string[]>('/api/get-gamemodes', fetcher);
+  // Fetch available game modes, expecting an array of GameMode objects
+  const { data: gamemodes, error: gamemodesError } = useSWR<GameMode[]>('/api/get-gamemodes', fetcher);
   // Fetch scores for the selected game mode
   const { data: scores, error: scoresError } = useSWR<Score[]>(`/api/get-scores?gamemode=${selectedGamemode}`, fetcher);
 
@@ -139,15 +146,15 @@ export default function LeaderboardPage() {
           {!gamemodes && !gamemodesError && <div>Loading modes...</div>}
           {gamemodes?.map((mode) => (
             <button
-              key={mode}
-              onClick={() => setSelectedGamemode(mode)}
+              key={mode.id}
+              onClick={() => setSelectedGamemode(mode.name)}
               className={`px-6 py-2 text-lg font-semibold rounded-md transition-all duration-300 ${
-                selectedGamemode === mode
+                selectedGamemode === mode.name
                   ? 'bg-yellow-400 text-gray-900 shadow-lg shadow-yellow-400/30'
                   : 'bg-gray-700 hover:bg-gray-600'
               }`}
             >
-              {mode}
+              {mode.name}
             </button>
           ))}
         </div>
