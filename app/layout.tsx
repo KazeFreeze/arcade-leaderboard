@@ -1,9 +1,14 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Orbitron } from "next/font/google"; // Changed to Orbitron for the arcade theme
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], display: 'swap' });
+// Setup the Orbitron font using next/font for better performance
+const orbitron = Orbitron({ 
+  subsets: ["latin"], 
+  display: 'swap',
+  weight: ['400', '700', '900'] // Specify weights used in the project
+});
 
 export const metadata: Metadata = {
   title: "Arcade Legends Leaderboard",
@@ -17,10 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <head>
-        {/* Using Google Fonts via next/font, so no direct link tags needed unless for other fonts */}
-      </head>
-      <body className={`${inter.className} h-full text-white`}>
+      <head />
+      {/* Applied the Orbitron font class to the body for consistent styling */}
+      <body className={`${orbitron.className} h-full text-white`}>
         {children}
       </body>
     </html>
