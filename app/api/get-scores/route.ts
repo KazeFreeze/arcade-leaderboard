@@ -4,12 +4,20 @@ import { sql } from '@/lib/db';
 
 export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const gamemode = searchParams.get('gamemode');
+
+  if (!gamemode) {
+    return NextResponse.json({ error: 'Game mode is required' }, { status: 400 });
+  }
+
   try {
-    // Fetch the top 10 scores, ordered from highest to lowest.
+    // Fetch the top 10 scores for a specific gamemode
     const { rows } = await sql`
-      SELECT id, name, score, gamemode, datetime, pending_name
+      SELECT id, name, score
       FROM leaderboard
+      WHERE gamemode = ${gamemode} AND name IS NOT NULL
       ORDER BY score DESC
       LIMIT 10;
     `;

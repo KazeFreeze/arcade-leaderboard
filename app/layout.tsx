@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: 'swap' });
 
 export const metadata: Metadata = {
-  title: "Arcade Gun Game Leaderboard",
-  description: "High scores from the DIY arcade gun game",
+  title: "Arcade Legends Leaderboard",
+  description: "High scores from the arcade",
 };
 
 export default function RootLayout({
@@ -18,11 +18,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+        {/* Using Google Fonts via next/font, so no direct link tags needed unless for other fonts */}
       </head>
-      <body className={`${inter.className} bg-arcade-bg text-white`}>{children}</body>
+      <body className={`${inter.className} bg-indigo-900 text-white`}>{children}</body>
     </html>
   );
 }

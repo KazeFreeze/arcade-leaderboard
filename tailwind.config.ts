@@ -9,16 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        'press-start': ['"Press Start 2P"', 'cursive'],
+        sans: ['Inter', 'sans-serif'],
+        mono: ['"Fira Code"', 'monospace'], // Example of a nice mono font
       },
       colors: {
-        'arcade-blue': '#00ffff',
-        'arcade-purple': '#ff00ff',
-        'arcade-bg': '#0a0a0a',
+        // You can add custom colors here if needed
       },
-      boxShadow: {
-        'arcade-glow': '0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 20px #ff00ff, 0 0 30px #ff00ff',
-      }
+      animation: {
+        pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
     },
   },
   plugins: [],
