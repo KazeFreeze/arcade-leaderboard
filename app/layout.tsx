@@ -1,18 +1,13 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import { Orbitron } from "next/font/google"; // Changed to Orbitron for the arcade theme
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-// Setup the Orbitron font using next/font for better performance
-const orbitron = Orbitron({ 
-  subsets: ["latin"], 
-  display: 'swap',
-  weight: ['400', '700', '900'] // Specify weights used in the project
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Arcade Legends Leaderboard",
-  description: "High scores from the arcade",
+  title: "Arcade Gun Game Leaderboard",
+  description: "High scores from the DIY arcade gun game",
 };
 
 export default function RootLayout({
@@ -21,12 +16,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <head />
-      {/* Applied the Orbitron font class to the body for consistent styling */}
-      <body className={`${orbitron.className} h-full text-white`}>
-        {children}
-      </body>
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      </head>
+      <body className={`${inter.className} bg-arcade-bg text-white`}>{children}</body>
     </html>
   );
 }
