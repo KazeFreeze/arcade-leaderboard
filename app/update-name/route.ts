@@ -1,6 +1,6 @@
-// app/update-name/route.ts
+// app/api/update-name/route.ts
 import { NextResponse } from 'next/server';
-import { sql } from '../../lib/db';
+import { sql } from '../../../lib/db';
 import { revalidatePath } from 'next/cache';
 
 export const runtime = 'edge';
