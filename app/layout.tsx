@@ -1,7 +1,7 @@
 // app/layout.tsx
 import type { Metadata } from "next";
 import { Orbitron } from "next/font/google"; // Changed to Orbitron for the arcade theme
-import "globals.css";
+import "./globals.css";
 
 // Setup the Orbitron font using next/font for better performance
 const orbitron = Orbitron({ 
