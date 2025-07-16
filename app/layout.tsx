@@ -26,7 +26,9 @@ export default function RootLayout({
             <div className="absolute bottom-1/4 left-1/3 w-20 h-20 bg-pink-500/10 rounded-full blur-xl animate-pulse-slow" style={{animationDelay: '0.5s'}}></div>
             <div className="absolute top-1/2 right-1/2 w-16 h-16 bg-cyan-500/10 rounded-full blur-xl animate-pulse-slow" style={{animationDelay: '2s'}}></div>
         </div>
-        {children}
+        <main className="relative z-10">
+          {children}
+        </main>
       </body>
     </html>
   );
