@@ -1,6 +1,6 @@
 // app/api/get-scores/route.ts
 import { NextResponse } from 'next/server';
-import { sql } from '../../../lib/db';
+import { sql } from '@/lib/db';
 
 export const runtime = 'edge';
 

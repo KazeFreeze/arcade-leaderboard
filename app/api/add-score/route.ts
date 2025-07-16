@@ -1,7 +1,7 @@
 // app/api/add-score/route.ts
 import { NextResponse } from 'next/server';
-import { createTable, sql } from '../../../lib/db';
-import { generateRandomName } from '../../../lib/generateName';
+import { createTable, sql } from '@/lib/db';
+import { generateRandomName } from '@/lib/generateName';
 import { revalidatePath } from 'next/cache';
 
 export const runtime = 'edge';
