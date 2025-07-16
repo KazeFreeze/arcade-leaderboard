@@ -1,235 +1,308 @@
+// app/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import useSWR, { mutate } from 'swr';
+import React, { useState, useEffect } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
+import { Trophy, Medal, Award, Crown, Zap, Star } from 'lucide-react';
 
-// Define the structure of a score object
+// Define the structure of a score object from your API
 interface Score {
   id: number;
   name: string;
   score: number;
   gamemode: string;
-  datetime: string;
+  datetime: string; // This will be a string from the API
+}
+
+// Define the structure for a game mode from your API
+interface Game {
+  id: string;
+  name: string;
+  icon: string;
 }
 
 // Define the structure for a pending score
 interface PendingScore {
-  id: number;
-  score: number;
-  gamemode: string;
-}
-
-// Define the structure for a game mode object
-interface GameMode {
     id: number;
-    name: string;
-    icon?: string; // Optional icon property
+    score: number;
+    gamemode: string;
+    created_at: string;
 }
 
-// Fetcher function for useSWR
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+// Helper function to generate a random name
+const generateRandomName = (): string => {
+    const adjectives = ['Cyber', 'Robo', 'Giga', 'Mega', 'Hyper', 'Atomic', 'Cosmic', 'Galactic', 'Quantum', 'Zero'];
+    const nouns = ['Striker', 'Blaster', 'Hunter', 'Raptor', 'Viper', 'Shadow', 'Knight', 'Ninja', 'Phantom', 'Spectre'];
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const num = Math.floor(Math.random() * 9000) + 1000;
+    return `${adj}${noun}${num}`;
+};
 
-export default function LeaderboardPage() {
-  // State for the selected game mode name
-  const [selectedGamemode, setSelectedGamemode] = useState('Classic');
-  // State for the user's input name
-  const [inputName, setInputName] = useState('');
-  // State to control the visibility of the name input modal
+
+// Fetcher function for SWR to get data from the API
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+const ArcadeLeaderboard = () => {
+  const [selectedGame, setSelectedGame] = useState<string>('');
+  const [animateScores, setAnimateScores] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // State to hold information about a score pending a name
   const [pendingScore, setPendingScore] = useState<PendingScore | null>(null);
+  const [inputName, setInputName] = useState('');
   
-  // Fetch available game modes, expecting an array of GameMode objects
-  const { data: gamemodes, error: gamemodesError } = useSWR<GameMode[]>('/api/get-gamemodes', fetcher);
-  // Fetch scores for the selected game mode
-  const { data: scores, error: scoresError } = useSWR<Score[]>(`/api/get-scores?gamemode=${selectedGamemode}`, fetcher);
+  const { mutate } = useSWRConfig();
 
-  // Effect to check for a pending score when the component mounts
+  // Fetch available game modes from your API
+  const { data: games, error: gamesError } = useSWR<Game[]>('/api/get-gamemodes', fetcher);
+
+  // Fetch scores for the selected game from your API
+  const { data: scores, error: scoresError } = useSWR<Score[]>(
+    selectedGame ? `/api/get-scores?gamemode=${selectedGame}` : null,
+    fetcher
+  );
+
+  // Poll for a pending score
+  const { data: fetchedPendingScore } = useSWR<PendingScore | null>('/api/get-pending-score', fetcher, {
+    refreshInterval: 5000, // Poll every 5 seconds
+  });
+
+  // Effect to open the modal when a pending score is detected
   useEffect(() => {
-    const checkForPendingScore = async () => {
-      try {
-        const response = await fetch('/api/get-pending-score');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.id) {
-            setPendingScore(data);
-            setIsModalOpen(true); // Open the modal if a pending score is found
-          }
-        }
-      } catch (error) {
-        console.error('Error checking for pending score:', error);
-      }
-    };
+    if (fetchedPendingScore && fetchedPendingScore.id) {
+      setPendingScore(fetchedPendingScore);
+      setIsModalOpen(true);
+    } else {
+      setPendingScore(null);
+      setIsModalOpen(false);
+    }
+  }, [fetchedPendingScore]);
 
-    checkForPendingScore();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  // Set the initial selected game once the game modes have loaded
+  useEffect(() => {
+    if (games && games.length > 0 && !selectedGame) {
+      setSelectedGame(games[0].id);
+    }
+  }, [games, selectedGame]);
 
-  // Handler for submitting a new score (for testing purposes)
-  const handleAddScore = async () => {
-    const newScore = {
-      score: Math.floor(Math.random() * 10000),
-      gamemode: selectedGamemode,
-    };
+  // Animation effect when changing games
+  useEffect(() => {
+    if(selectedGame){
+        setAnimateScores(true);
+        const timer = setTimeout(() => setAnimateScores(false), 1000);
+        return () => clearTimeout(timer);
+    }
+  }, [selectedGame]);
+
+  const handleNameUpdate = async (name: string) => {
+    if (!name.trim()) return;
 
     try {
-      const response = await fetch('/api/add-score', {
+      const res = await fetch('/api/update-name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newScore),
+        body: JSON.stringify({ name }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setPendingScore(data.score); // Set the new pending score
-        setIsModalOpen(true); // Open the modal to ask for the name
-        mutate(`/api/get-scores?gamemode=${selectedGamemode}`); // Revalidate the scores
-      } else {
-        const errorData = await response.json();
-        console.error('Failed to add score:', errorData.error);
-        alert(`Error: ${errorData.error}`);
-      }
-    } catch (error) {
-      console.error('An error occurred while adding the score:', error);
-      alert('An unexpected error occurred. Please try again.');
-    }
-  };
-
-  // Handler for submitting the user's name
-  const handleNameSubmit = async () => {
-    if (!inputName.trim()) {
-      alert('Please enter a name.');
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/update-name', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: inputName }),
-      });
-
-      if (response.ok) {
-        // If the name is updated successfully
-        alert('Score submitted successfully!');
+      if (res.ok) {
         setIsModalOpen(false);
-        setPendingScore(null);
         setInputName('');
-        mutate(`/api/get-scores?gamemode=${selectedGamemode}`); // Re-fetch scores to show the new name
+        setPendingScore(null);
+        // Revalidate the data to update the UI
+        mutate('/api/get-pending-score');
+        mutate(`/api/get-scores?gamemode=${selectedGame}`);
       } else {
-        // Handle expected errors from the API, like 404
-        const errorData = await response.json();
-        if (response.status === 404) {
-          alert("Could not find a score to update. Your session might have expired. Please try playing again.");
-          setIsModalOpen(false); // Close the modal as there's nothing to update
-        } else {
-          // Handle other server errors (500, etc.)
-          alert(`Error: ${errorData.error || 'Failed to update name'}`);
-        }
-        console.error("Failed to update name:", errorData);
+        console.error('Failed to update name');
       }
     } catch (error) {
-      console.error("An error occurred while updating the name:", error);
-      alert("An unexpected error occurred. Please check the console.");
+      console.error('Error updating name:', error);
     }
   };
-  
+
+  const handleRandomizeName = () => {
+    const randomName = generateRandomName();
+    handleNameUpdate(randomName);
+  };
+
+  const getRankColor = (rank: number) => {
+    switch(rank) {
+      case 1: return 'text-yellow-400 bg-yellow-400/20 border-yellow-400/50';
+      case 2: return 'text-gray-300 bg-gray-300/20 border-gray-300/50';
+      case 3: return 'text-amber-600 bg-amber-600/20 border-amber-600/50';
+      default: return 'text-purple-400 bg-purple-400/20 border-purple-400/50';
+    }
+  };
+
+  // Helper to get game icon, with a fallback
+  const getGameIcon = (gameId: string) => {
+    const game = games?.find(g => g.id === gameId);
+    return game ? game.icon : '🕹️';
+  }
+
+  // Loading and error states
+  if (gamesError) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-red-500">Error loading games.</div>
+  if (scoresError) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-red-500">Error loading scores.</div>
+  if (!games) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-cyan-400">Loading...</div>
+
+
   return (
-    <div className="bg-gray-900 text-white min-h-screen font-mono">
-      <main className="container mx-auto px-4 py-8">
-        <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-yellow-400 tracking-widest">ARCADE LEADERBOARD</h1>
-        </header>
-
-        {/* Game Mode Selection */}
-        <div className="flex justify-center items-center mb-8 space-x-4">
-          {gamemodesError && <div>Failed to load game modes.</div>}
-          {!gamemodes && !gamemodesError && <div>Loading modes...</div>}
-          {gamemodes?.map((mode) => (
-            <button
-              key={mode.id}
-              onClick={() => setSelectedGamemode(mode.name)}
-              className={`px-6 py-2 text-lg font-semibold rounded-md transition-all duration-300 ${
-                selectedGamemode === mode.name
-                  ? 'bg-yellow-400 text-gray-900 shadow-lg shadow-yellow-400/30'
-                  : 'bg-gray-700 hover:bg-gray-600'
-              }`}
-            >
-              {mode.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Add Score Button for testing */}
-        <div className="text-center mb-8">
-            <button
-                onClick={handleAddScore}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105"
-            >
-                Add Random Score
-            </button>
-        </div>
-
-        {/* Leaderboard Table */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 shadow-2xl border border-gray-700">
-          {scoresError && <div className="text-center text-red-400">Failed to load scores. Please try again.</div>}
-          {!scores && !scoresError && <div className="text-center text-gray-400">Loading scores...</div>}
-          {scores && (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-gray-600">
-                  <th className="p-4 text-lg text-yellow-400">Rank</th>
-                  <th className="p-4 text-lg text-yellow-400">Name</th>
-                  <th className="p-4 text-lg text-yellow-400">Score</th>
-                  <th className="p-4 text-lg text-yellow-400">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scores.map((score, index) => (
-                  <tr key={score.id} className="border-b border-gray-700 last:border-b-0 hover:bg-gray-700/50">
-                    <td className="p-4 text-xl">{index + 1}</td>
-                    <td className="p-4 text-xl">{score.name}</td>
-                    <td className="p-4 text-xl">{score.score}</td>
-                    <td className="p-4 text-sm text-gray-400">{new Date(score.datetime).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </main>
-
-      {/* Modal for Name Input */}
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 font-sans">
+      {/* Name Input Modal */}
       {isModalOpen && pendingScore && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
-          <div className="bg-gray-800 p-8 rounded-lg shadow-xl border border-yellow-400">
-            <h2 className="text-2xl font-bold mb-4">High Score!</h2>
-            <p className="mb-2">You scored <span className="text-yellow-400 font-bold">{pendingScore.score}</span> in {pendingScore.gamemode}!</p>
-            <p className="mb-4">Enter your name to claim your spot on the leaderboard:</p>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-md">
+          <div className="bg-gray-900 border-2 border-cyan-500 rounded-2xl p-8 shadow-lg shadow-cyan-500/50 text-center max-w-md w-full m-4">
+            <h2 className="text-4xl font-bold text-cyan-300 font-mono mb-2">NEW HIGH SCORE!</h2>
+            <p className="text-gray-400 mb-4">Enter your name for the hall of fame!</p>
+            <div className="bg-black/50 p-4 rounded-lg mb-6">
+                <div className="text-xl text-purple-400 font-mono">SCORE</div>
+                <div className="text-5xl text-white font-bold">{pendingScore.score.toLocaleString()}</div>
+                <div className="text-md text-gray-400 font-mono mt-2">in {pendingScore.gamemode}</div>
+            </div>
             <input
               type="text"
               value={inputName}
-              onChange={(e) => setInputName(e.target.value)}
-              maxLength={20}
-              className="w-full bg-gray-900 border border-gray-600 rounded px-4 py-2 mb-4 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              placeholder="Enter your name"
+              onChange={(e) => setInputName(e.target.value.substring(0, 15))}
+              maxLength={15}
+              placeholder="ENTER YOUR NAME"
+              className="w-full bg-gray-800 border-2 border-purple-500 rounded-lg p-4 text-center text-2xl text-white font-mono uppercase focus:outline-none focus:ring-2 focus:ring-cyan-400"
             />
-            <div className="flex justify-end space-x-4">
-               <button
-                onClick={() => setIsModalOpen(false)}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={() => handleNameUpdate(inputName)}
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 rounded-lg text-lg transition-transform hover:scale-105"
               >
-                Cancel
+                SUBMIT NAME
               </button>
               <button
-                onClick={handleNameSubmit}
-                className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded"
+                onClick={handleRandomizeName}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-lg text-lg transition-transform hover:scale-105"
               >
-                Submit Score
+                RANDOMIZE
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-500/10 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-20 h-20 bg-pink-500/10 rounded-full blur-xl animate-pulse delay-500"></div>
+      </div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 mb-4 animate-pulse">
+            ARCADE LEGENDS
+          </h1>
+          <div className="flex items-center justify-center gap-2 text-2xl text-cyan-300">
+            <Zap className="w-8 h-8" />
+            <span className="font-mono">HIGH SCORES</span>
+            <Zap className="w-8 h-8" />
+          </div>
+        </div>
+
+        {/* Game Selection */}
+        <div className="flex flex-wrap justify-center gap-4 mb-8">
+          {games.map((game) => (
+            <button
+              key={game.id}
+              onClick={() => setSelectedGame(game.id)}
+              className={`px-6 py-3 rounded-lg font-bold text-lg transition-all duration-300 border-2 ${
+                selectedGame === game.id
+                  ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white border-cyan-300 shadow-lg shadow-cyan-500/50'
+                  : 'bg-gray-800/50 text-gray-300 border-gray-600 hover:border-cyan-400 hover:text-cyan-300'
+              }`}
+            >
+              <span className="mr-2">{getGameIcon(game.id)}</span>
+              {game.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Leaderboard */}
+        <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-2xl">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold text-cyan-300 font-mono">
+              {games.find(g => g.id === selectedGame)?.name} LEADERBOARD
+            </h2>
+            <div className="text-cyan-400 text-sm font-mono">
+              LAST UPDATED: {new Date().toLocaleTimeString()}
+            </div>
+          </div>
+
+          {/* Leaderboard Header - Updated Layout */}
+          <div className="grid grid-cols-12 gap-4 mb-4 text-cyan-300 font-bold text-sm uppercase tracking-wider border-b border-cyan-500/30 pb-2">
+            <div className="col-span-1 text-center">RANK</div>
+            <div className="col-span-4">PLAYER</div>
+            <div className="col-span-2 text-right">SCORE</div>
+            <div className="col-span-2 text-center">GAMEMODE</div>
+            <div className="col-span-3 text-center">DATE ACHIEVED</div>
+          </div>
+
+          {/* Leaderboard Entries */}
+          <div className="space-y-2">
+            {scores ? scores.map((entry, index) => (
+              <div
+                key={entry.id}
+                className={`grid grid-cols-12 gap-4 items-center p-4 rounded-lg border transition-all duration-500 hover:scale-105 ${
+                  getRankColor(index + 1)
+                } ${animateScores ? 'animate-pulse' : ''}`}
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="col-span-1 text-center font-bold text-2xl">
+                  #{index + 1}
+                </div>
+                <div className="col-span-4 font-mono text-lg font-bold">
+                  {entry.name}
+                </div>
+                <div className="col-span-2 text-right font-mono text-xl font-bold">
+                  {entry.score.toLocaleString()}
+                </div>
+                <div className="col-span-2 text-center font-mono text-sm">
+                  {entry.gamemode}
+                </div>
+                <div className="col-span-3 text-center font-mono text-sm">
+                  {new Date(entry.datetime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </div>
+              </div>
+            )) : <div className="text-center text-gray-400 py-8">Loading scores...</div>}
+             {scores && scores.length === 0 && (
+              <div className="text-center text-gray-400 py-8 col-span-12">No scores recorded for this game yet. Be the first!</div>
+            )}
+          </div>
+          
+          {/* Footer - Updated */}
+          <div className="mt-8 text-center text-cyan-400 text-sm font-mono">
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <span>🏆 HALL OF FAME 🏆</span>
+              <span>•</span>
+              <span>INSERT COIN TO PLAY</span>
+              <span>•</span>
+              <span>BEAT THE HIGH SCORE!</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Info Panel */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-black/30 backdrop-blur-sm rounded-lg border border-purple-500/30 p-4 text-center">
+            <div className="text-purple-400 text-2xl font-bold">
+              {scores && scores.length > 0 ? scores[0].score.toLocaleString() : 'N/A'}
+            </div>
+            <div className="text-purple-300 text-sm font-mono">HIGHEST SCORE</div>
+          </div>
+          <div className="bg-black/30 backdrop-blur-sm rounded-lg border border-cyan-500/30 p-4 text-center">
+            <div className="text-cyan-400 text-2xl font-bold">
+              {scores?.length || 0}
+            </div>
+            <div className="text-cyan-300 text-sm font-mono">TOTAL PLAYERS</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default ArcadeLeaderboard;
