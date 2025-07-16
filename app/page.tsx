@@ -1,3 +1,4 @@
+// app/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -52,18 +53,15 @@ const ArcadeLeaderboard = () => {
   const { mutate } = useSWRConfig();
 
   // Fetch available game modes from your API
-  // NOTE: This assumes an API endpoint '/api/get-gamemodes' that returns a Game[] array.
   const { data: games, error: gamesError } = useSWR<Game[]>('/api/get-gamemodes', fetcher);
 
   // Fetch scores for the selected game from your API
-  // NOTE: This assumes an API endpoint '/api/get-scores' that accepts a 'gamemode' query param.
   const { data: scores, error: scoresError } = useSWR<Score[]>(
     selectedGame ? `/api/get-scores?gamemode=${selectedGame}` : null,
     fetcher
   );
 
   // Poll for a pending score
-  // NOTE: This assumes an API endpoint '/api/get-pending-score' for polling.
   const { data: fetchedPendingScore } = useSWR<PendingScore | null>('/api/get-pending-score', fetcher, {
     refreshInterval: 5000, // Poll every 5 seconds
   });
@@ -74,7 +72,6 @@ const ArcadeLeaderboard = () => {
       setPendingScore(fetchedPendingScore);
       setIsModalOpen(true);
     } else {
-      // This part ensures the modal closes if the pending score is resolved elsewhere
       setPendingScore(null);
       setIsModalOpen(false);
     }
@@ -96,42 +93,36 @@ const ArcadeLeaderboard = () => {
     }
   }, [selectedGame]);
 
-  // Handles submitting the name for a pending score
   const handleNameUpdate = async (name: string) => {
-    if (!name.trim() || !pendingScore) return;
+    if (!name.trim() || !pendingScore?.id) return; // Ensure name is not empty and pendingScore.id exists
 
     try {
-      // NOTE: This assumes an API endpoint '/api/update-name' to finalize the score.
       const res = await fetch('/api/update-name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, scoreId: pendingScore.id }),
+        body: JSON.stringify({ name, scoreId: pendingScore.id }), // Pass scoreId
       });
 
       if (res.ok) {
         setIsModalOpen(false);
         setInputName('');
         setPendingScore(null);
-        // Revalidate the data to update the UI immediately
+        // Revalidate the data to update the UI
         mutate('/api/get-pending-score');
         mutate(`/api/get-scores?gamemode=${selectedGame}`);
       } else {
         console.error('Failed to update name');
-        // You could add user-facing error handling here
       }
     } catch (error) {
       console.error('Error updating name:', error);
     }
   };
 
-  // Handles the randomize button click
   const handleRandomizeName = () => {
     const randomName = generateRandomName();
-    setInputName(randomName);
     handleNameUpdate(randomName);
   };
-  
-  // Gets a specific color class based on rank
+
   const getRankColor = (rank: number) => {
     switch(rank) {
       case 1: return 'text-yellow-400 bg-yellow-400/20 border-yellow-400/50';
@@ -141,22 +132,20 @@ const ArcadeLeaderboard = () => {
     }
   };
 
-  // Helper to get game icon from the loaded games data, with a fallback
+  // Helper to get game icon, with a fallback
   const getGameIcon = (gameId: string) => {
     const game = games?.find(g => g.id === gameId);
     return game ? game.icon : '🕹️';
   }
 
-  // --- Render Logic ---
-
   // Loading and error states
   if (gamesError) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-red-500">Error loading games.</div>
   if (scoresError) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-red-500">Error loading scores.</div>
-  if (!games) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-cyan-400">Loading Arcade Data...</div>
+  if (!games) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-cyan-400">Loading...</div>
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 font-sans text-white">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 font-sans">
       {/* Name Input Modal */}
       {isModalOpen && pendingScore && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-md">
@@ -166,7 +155,7 @@ const ArcadeLeaderboard = () => {
             <div className="bg-black/50 p-4 rounded-lg mb-6">
                 <div className="text-xl text-purple-400 font-mono">SCORE</div>
                 <div className="text-5xl text-white font-bold">{pendingScore.score.toLocaleString()}</div>
-                <div className="text-md text-gray-400 font-mono mt-2">in {games?.find(g => g.id === pendingScore.gamemode)?.name || 'the game'}</div>
+                <div className="text-md text-gray-400 font-mono mt-2">in {pendingScore.gamemode}</div>
             </div>
             <input
               type="text"
@@ -179,8 +168,7 @@ const ArcadeLeaderboard = () => {
             <div className="flex gap-4 mt-6">
               <button
                 onClick={() => handleNameUpdate(inputName)}
-                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 rounded-lg text-lg transition-transform hover:scale-105 disabled:opacity-50 disabled:scale-100"
-                disabled={!inputName.trim()}
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 rounded-lg text-lg transition-transform hover:scale-105"
               >
                 SUBMIT NAME
               </button>
@@ -196,15 +184,15 @@ const ArcadeLeaderboard = () => {
       )}
 
       {/* Animated background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl animate-pulse"></div>
-        <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-20 h-20 bg-pink-500/10 rounded-full blur-2xl animate-pulse delay-500"></div>
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-500/10 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-20 h-20 bg-pink-500/10 rounded-full blur-xl animate-pulse delay-500"></div>
       </div>
 
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
-        <header className="text-center mb-8">
+        <div className="text-center mb-8">
           <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 mb-4 animate-pulse">
             ARCADE LEGENDS
           </h1>
@@ -213,7 +201,7 @@ const ArcadeLeaderboard = () => {
             <span className="font-mono">HIGH SCORES</span>
             <Zap className="w-8 h-8" />
           </div>
-        </header>
+        </div>
 
         {/* Game Selection */}
         <div className="flex flex-wrap justify-center gap-4 mb-8">
@@ -223,8 +211,8 @@ const ArcadeLeaderboard = () => {
               onClick={() => setSelectedGame(game.id)}
               className={`px-6 py-3 rounded-lg font-bold text-lg transition-all duration-300 border-2 ${
                 selectedGame === game.id
-                  ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white border-cyan-300 shadow-lg shadow-cyan-500/50 scale-105'
-                  : 'bg-gray-800/50 text-gray-300 border-gray-600 hover:border-cyan-400 hover:text-cyan-300 hover:scale-105'
+                  ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white border-cyan-300 shadow-lg shadow-cyan-500/50'
+                  : 'bg-gray-800/50 text-gray-300 border-gray-600 hover:border-cyan-400 hover:text-cyan-300'
               }`}
             >
               <span className="mr-2">{getGameIcon(game.id)}</span>
@@ -234,82 +222,82 @@ const ArcadeLeaderboard = () => {
         </div>
 
         {/* Leaderboard */}
-        <main className="bg-black/30 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-2xl">
+        <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-3xl font-bold text-cyan-300 font-mono">
-              {games.find(g => g.id === selectedGame)?.name || 'Leaderboard'}
+              {games.find(g => g.id === selectedGame)?.name} LEADERBOARD
             </h2>
             <div className="text-cyan-400 text-sm font-mono">
               LAST UPDATED: {new Date().toLocaleTimeString()}
             </div>
           </div>
 
-          {/* Leaderboard Header */}
+          {/* Leaderboard Header - Updated Layout */}
           <div className="grid grid-cols-12 gap-4 mb-4 text-cyan-300 font-bold text-sm uppercase tracking-wider border-b border-cyan-500/30 pb-2">
             <div className="col-span-1 text-center">RANK</div>
             <div className="col-span-4">PLAYER</div>
-            <div className="col-span-3 text-right">SCORE</div>
-            <div className="col-span-4 text-center">DATE ACHIEVED</div>
+            <div className="col-span-2 text-right">SCORE</div>
+            <div className="col-span-2 text-center">GAMEMODE</div>
+            <div className="col-span-3 text-center">DATE ACHIEVED</div>
           </div>
 
           {/* Leaderboard Entries */}
           <div className="space-y-2">
-            {!scores && <div className="text-center text-gray-400 py-8">Loading scores...</div>}
-            {scores && scores.map((entry, index) => (
+            {scores ? scores.map((entry, index) => (
               <div
                 key={entry.id}
-                className={`grid grid-cols-12 gap-4 items-center p-3 rounded-lg border transition-all duration-500 hover:bg-white/10 hover:scale-[1.02] ${
+                className={`grid grid-cols-12 gap-4 items-center p-4 rounded-lg border transition-all duration-500 hover:scale-105 ${
                   getRankColor(index + 1)
-                } ${animateScores ? 'opacity-0 animate-fade-in' : 'opacity-100'}`}
-                style={{ animationDelay: `${index * 75}ms` }}
+                } ${animateScores ? 'animate-pulse' : ''}`}
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="col-span-1 text-center font-bold text-2xl flex items-center justify-center">
-                    {index === 0 && <Trophy className="w-6 h-6 mr-2 text-yellow-400"/>}
-                    {index === 1 && <Medal className="w-6 h-6 mr-2 text-gray-300"/>}
-                    {index === 2 && <Award className="w-6 h-6 mr-2 text-amber-600"/>}
-                    #{index + 1}
+                <div className="col-span-1 text-center font-bold text-2xl">
+                  #{index + 1}
                 </div>
-                <div className="col-span-4 font-mono text-lg font-bold truncate">
+                <div className="col-span-4 font-mono text-lg font-bold">
                   {entry.name}
                 </div>
-                <div className="col-span-3 text-right font-mono text-xl font-bold">
+                <div className="col-span-2 text-right font-mono text-xl font-bold">
                   {entry.score.toLocaleString()}
                 </div>
-                <div className="col-span-4 text-center font-mono text-sm">
+                <div className="col-span-2 text-center font-mono text-sm">
+                  {entry.gamemode}
+                </div>
+                <div className="col-span-3 text-center font-mono text-sm">
                   {new Date(entry.datetime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                 </div>
               </div>
-            ))}
+            )) : <div className="text-center text-gray-400 py-8">Loading scores...</div>}
              {scores && scores.length === 0 && (
               <div className="text-center text-gray-400 py-8 col-span-12">No scores recorded for this game yet. Be the first!</div>
             )}
           </div>
           
-          {/* Footer */}
-          <footer className="mt-8 text-center text-cyan-400 text-sm font-mono">
+          {/* Footer - Updated */}
+          <div className="mt-8 text-center text-cyan-400 text-sm font-mono">
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <span>🏆 HALL OF FAME 🏆</span>
-              <span className="hidden md:inline">•</span>
+              <span>•</span>
               <span>INSERT COIN TO PLAY</span>
-              <span className="hidden md:inline">•</span>
+              <span>•</span>
               <span>BEAT THE HIGH SCORE!</span>
             </div>
-          </footer>
-        </main>
+          </div>
+        </div>
 
         {/* Additional Info Panel */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-black/30 backdrop-blur-sm rounded-lg border border-purple-500/30 p-4 text-center">
-            <div className="text-purple-400 text-3xl font-bold font-mono">
+            <div className="text-purple-400 text-2xl font-bold">
               {scores && scores.length > 0 ? scores[0].score.toLocaleString() : 'N/A'}
             </div>
-            <div className="text-purple-300 text-sm font-mono mt-1">HIGHEST SCORE</div>
+            <div className="text-purple-300 text-sm font-mono">HIGHEST SCORE</div>
           </div>
           <div className="bg-black/30 backdrop-blur-sm rounded-lg border border-cyan-500/30 p-4 text-center">
-            <div className="text-cyan-400 text-3xl font-bold font-mono">
+            <div className="text-cyan-400 text-2xl font-bold">
               {scores?.length || 0}
             </div>
-            <div className="text-cyan-300 text-sm font-mono mt-1">TOTAL PLAYERS</div>
+            <div className="text-cyan-300 text-sm font-mono">TOTAL PLAYERS</div>
           </div>
         </div>
       </div>
