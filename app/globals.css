@@ -1,3 +1,61 @@
+/* Import the Orbitron font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+/* Standard Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Set the default body font to the new arcade font */
+@layer base {
+  body {
+    font-family: 'Orbitron', monospace;
+  }
+}
+
+/* Add custom utility classes for the arcade theme */
+@layer utilities {
+  .neon-glow {
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+
+  .rank-badge {
+    background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    backdrop-filter: blur(10px);
+  }
+
+  .game-card {
+    background: linear-gradient(135deg, rgba(0,255,255,0.1), rgba(255,0,255,0.1));
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(0,255,255,0.3);
+    transition: all 0.3s ease;
+  }
+
+  .game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,255,255,0.3);
+  }
+
+  .game-card.active {
+    background: linear-gradient(135deg, rgba(0,255,255,0.3), rgba(255,0,255,0.3));
+    border-color: rgba(0,255,255,0.8);
+    box-shadow: 0 0 30px rgba(0,255,255,0.5);
+  }
+
+  .leaderboard-entry {
+    transition: all 0.3s ease;
+    animation: slideIn 0.5s ease-out forwards;
+    opacity: 0;
+  }
+
+  .leaderboard-entry:hover {
+    transform: translateX(10px) scale(1.02);
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(0,255,255,0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,255,0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+}
