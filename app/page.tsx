@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { Trophy, Medal, Award, Crown, Zap, Star } from 'lucide-react';
 
 // Define the structure of a score object from your API
@@ -21,12 +21,36 @@ interface Game {
   icon: string;
 }
 
+// Define the structure for a pending score
+interface PendingScore {
+    id: number;
+    score: number;
+    gamemode: string;
+    created_at: string;
+}
+
+// Helper function to generate a random name
+const generateRandomName = (): string => {
+    const adjectives = ['Cyber', 'Robo', 'Giga', 'Mega', 'Hyper', 'Atomic', 'Cosmic', 'Galactic', 'Quantum', 'Zero'];
+    const nouns = ['Striker', 'Blaster', 'Hunter', 'Raptor', 'Viper', 'Shadow', 'Knight', 'Ninja', 'Phantom', 'Spectre'];
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const num = Math.floor(Math.random() * 9000) + 1000;
+    return `${adj}${noun}${num}`;
+};
+
+
 // Fetcher function for SWR to get data from the API
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const ArcadeLeaderboard = () => {
   const [selectedGame, setSelectedGame] = useState<string>('');
   const [animateScores, setAnimateScores] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingScore, setPendingScore] = useState<PendingScore | null>(null);
+  const [inputName, setInputName] = useState('');
+  
+  const { mutate } = useSWRConfig();
 
   // Fetch available game modes from your API
   const { data: games, error: gamesError } = useSWR<Game[]>('/api/get-gamemodes', fetcher);
@@ -36,6 +60,22 @@ const ArcadeLeaderboard = () => {
     selectedGame ? `/api/get-scores?gamemode=${selectedGame}` : null,
     fetcher
   );
+
+  // Poll for a pending score
+  const { data: fetchedPendingScore } = useSWR<PendingScore | null>('/api/get-pending-score', fetcher, {
+    refreshInterval: 5000, // Poll every 5 seconds
+  });
+
+  // Effect to open the modal when a pending score is detected
+  useEffect(() => {
+    if (fetchedPendingScore && fetchedPendingScore.id) {
+      setPendingScore(fetchedPendingScore);
+      setIsModalOpen(true);
+    } else {
+      setPendingScore(null);
+      setIsModalOpen(false);
+    }
+  }, [fetchedPendingScore]);
 
   // Set the initial selected game once the game modes have loaded
   useEffect(() => {
@@ -52,6 +92,36 @@ const ArcadeLeaderboard = () => {
         return () => clearTimeout(timer);
     }
   }, [selectedGame]);
+
+  const handleNameUpdate = async (name: string) => {
+    if (!name.trim()) return;
+
+    try {
+      const res = await fetch('/api/update-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+
+      if (res.ok) {
+        setIsModalOpen(false);
+        setInputName('');
+        setPendingScore(null);
+        // Revalidate the data to update the UI
+        mutate('/api/get-pending-score');
+        mutate(`/api/get-scores?gamemode=${selectedGame}`);
+      } else {
+        console.error('Failed to update name');
+      }
+    } catch (error) {
+      console.error('Error updating name:', error);
+    }
+  };
+
+  const handleRandomizeName = () => {
+    const randomName = generateRandomName();
+    handleNameUpdate(randomName);
+  };
 
   const getRankColor = (rank: number) => {
     switch(rank) {
@@ -76,6 +146,43 @@ const ArcadeLeaderboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 font-sans">
+      {/* Name Input Modal */}
+      {isModalOpen && pendingScore && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-md">
+          <div className="bg-gray-900 border-2 border-cyan-500 rounded-2xl p-8 shadow-lg shadow-cyan-500/50 text-center max-w-md w-full m-4">
+            <h2 className="text-4xl font-bold text-cyan-300 font-mono mb-2">NEW HIGH SCORE!</h2>
+            <p className="text-gray-400 mb-4">Enter your name for the hall of fame!</p>
+            <div className="bg-black/50 p-4 rounded-lg mb-6">
+                <div className="text-xl text-purple-400 font-mono">SCORE</div>
+                <div className="text-5xl text-white font-bold">{pendingScore.score.toLocaleString()}</div>
+                <div className="text-md text-gray-400 font-mono mt-2">in {pendingScore.gamemode}</div>
+            </div>
+            <input
+              type="text"
+              value={inputName}
+              onChange={(e) => setInputName(e.target.value.substring(0, 15))}
+              maxLength={15}
+              placeholder="ENTER YOUR NAME"
+              className="w-full bg-gray-800 border-2 border-purple-500 rounded-lg p-4 text-center text-2xl text-white font-mono uppercase focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            />
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={() => handleNameUpdate(inputName)}
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 rounded-lg text-lg transition-transform hover:scale-105"
+              >
+                SUBMIT NAME
+              </button>
+              <button
+                onClick={handleRandomizeName}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-lg text-lg transition-transform hover:scale-105"
+              >
+                RANDOMIZE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-500/10 rounded-full blur-xl animate-pulse"></div>
