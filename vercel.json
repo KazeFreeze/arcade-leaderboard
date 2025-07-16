@@ -1,0 +1,14 @@
+{
+  "framework": "nextjs",
+  "functions": {
+    "api/add-score": {
+      "runtime": "edge"
+    },
+    "api/update-name": {
+      "runtime": "edge"
+    },
+    "api/get-scores": {
+      "runtime": "edge"
+    }
+  }
+}
