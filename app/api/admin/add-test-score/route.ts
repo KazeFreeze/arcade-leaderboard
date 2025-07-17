@@ -10,7 +10,8 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
   // This is now the ONLY check.
-  if (!session || session.user?.email !== process.env.ADMIN_EMAIL) {
+  // @ts-ignore
+  if (!session || !session.user?.isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -11,7 +11,8 @@ export async function POST(request: Request) {
 
   // This is now the ONLY check. It verifies the user is logged in
   // via GitHub and their email matches the ADMIN_EMAIL.
-  if (!session || session.user?.email !== process.env.ADMIN_EMAIL) {
+  // @ts-ignore
+  if (!session || !session.user?.isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -21,12 +21,29 @@ export const authOptions: NextAuthOptions = {
      */
     async signIn({ user }) {
       if (user.email === process.env.ADMIN_EMAIL) {
-        return true; // Allow sign-in
+        return true; // Allow sign-in for the admin
       } else {
+        // Log unauthorized attempts for monitoring, but return a redirect
+        // to prevent the user from being stuck on an error page.
         console.log(`Unauthorized sign-in attempt by: ${user.email}`);
-        return false; // Block sign-in
+        return "/unauthorized"; // Redirect non-admin users
       }
+    },
+    /**
+     * The session callback adds the user's role to the session object,
+     * so it's available on the client-side.
+     */
+    async session({ session, token }) {
+      if (session?.user) {
+        // @ts-ignore
+        session.user.isAdmin = token.email === process.env.ADMIN_EMAIL;
+      }
+      return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: "/admin", // Redirect users to the admin page to sign in
+    error: "/api/auth/error", // Custom error page
+  },
 };
