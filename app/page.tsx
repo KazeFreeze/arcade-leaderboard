@@ -194,7 +194,7 @@ const ArcadeLeaderboard = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 mb-4 animate-pulse">
-            ARCADE LEGENDS
+            Laser Target Game
           </h1>
           <div className="flex items-center justify-center gap-2 text-2xl text-cyan-300">
             <Zap className="w-8 h-8" />
