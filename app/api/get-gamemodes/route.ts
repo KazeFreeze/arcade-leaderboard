@@ -6,9 +6,9 @@ export const runtime = "edge";
 
 // Define a mapping from game ID to a more user-friendly name and an icon
 const gameDetails: { [key: string]: { name: string; icon: string } } = {
-  "pac-man": { name: "PAC-MAN", icon: "🟡" },
-  "space-invaders": { name: "SPACE INVADERS", icon: "👾" },
-  tetris: { name: "TETRIS", icon: "🟩" },
+  "time-rush": { name: "TIME RUSH", icon: "⌛" },
+  reflex: { name: "REFLEX", icon: "🎯" },
+  endless: { name: "ENDLESS", icon: "🎮" },
   asteroids: { name: "ASTEROIDS", icon: "💫" },
   frogger: { name: "FROGGER", icon: "🐸" },
 };
@@ -21,9 +21,10 @@ export async function GET() {
     `;
 
     const formattedGames = rows.map((row) => {
+      // FIX: Explicitly type the 'l' parameter as a string to satisfy TypeScript's strict mode.
       const fallbackName = row.gamemode
         .replace(/-/g, " ")
-        .replace(/\b\w/g, (l) => l.toUpperCase());
+        .replace(/\b\w/g, (l: string) => l.toUpperCase());
       const details = gameDetails[row.gamemode] || {
         name: fallbackName,
         icon: "🕹️",
@@ -36,9 +37,7 @@ export async function GET() {
       };
     });
 
-    // FIX: Return the response with headers that prevent caching.
-    // This tells Vercel's Edge Network and the browser to always fetch
-    // a fresh list of gamemodes and not use a cached version.
+    // Return the response with headers that prevent caching.
     return NextResponse.json(formattedGames, {
       status: 200,
       headers: {
