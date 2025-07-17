@@ -20,7 +20,8 @@ export const authOptions: NextAuthOptions = {
      * from your environment variables.
      */
     async signIn({ user }) {
-      if (user.email === process.env.ADMIN_EMAIL) {
+      // Use the NEXT_PUBLIC_ prefixed variable here as well for consistency
+      if (user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
         return true; // Allow sign-in for the admin
       } else {
         // Log unauthorized attempts for monitoring, but return a redirect
@@ -36,7 +37,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session?.user) {
         // @ts-ignore
-        session.user.isAdmin = token.email === process.env.ADMIN_EMAIL;
+        session.user.isAdmin =
+          token.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
       }
       return session;
     },
