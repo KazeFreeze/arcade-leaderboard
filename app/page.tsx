@@ -61,16 +61,27 @@ const ArcadeLeaderboard = () => {
     fetcher
   );
 
-  // Poll for a pending score
+  /**
+   * FIX: The SWR hook for polling the pending score has been updated.
+   * `revalidateOnMount: true` explicitly tells SWR to fetch data when the component loads.
+   * `dedupingInterval: 0` is the key change. It prevents SWR from serving cached data
+   * on initial load, forcing it to make a fresh request to the API immediately.
+   * This ensures that if a pending score was deleted from the database, the UI won't
+   * incorrectly show the modal based on stale, cached data.
+   */
   const { data: fetchedPendingScore } = useSWR<PendingScore | null>('/api/get-pending-score', fetcher, {
-    refreshInterval: 5000, // Poll every 5 seconds
+    refreshInterval: 5000,   // Continue polling every 5 seconds
+    revalidateOnMount: true, // Explicitly revalidate on mount
+    dedupingInterval: 0,     // Force re-fetch on load, bypassing cache deduping
   });
+
 
   // On initial page load, run a cleanup of any expired pending scores.
   useEffect(() => {
     const cleanupPendingScores = async () => {
       try {
         await fetch('/api/cleanup-pending', { method: 'POST' });
+        // After cleanup, trigger a re-fetch of the pending score state.
         mutate('/api/get-pending-score');
       } catch (error) {
         console.error('Failed to cleanup pending scores:', error);
@@ -107,15 +118,6 @@ const ArcadeLeaderboard = () => {
     }
   }, [selectedGame]);
 
-  /**
-   * FIX: This function now correctly handles client-side state.
-   * The key change is using `mutate('/api/get-pending-score', null, false)`.
-   * This command does two things:
-   * 1. It immediately updates SWR's local cache for the 'get-pending-score' endpoint to `null`, removing the stale data.
-   * 2. It prevents an immediate re-fetch (`false`), which is more efficient since we know the correct state is `null`.
-   * This ensures that after submitting a name, the "ghost" pending score is instantly cleared from the UI and local cache,
-   * preventing the modal from reappearing incorrectly on subsequent renders or page loads.
-   */
   const handleNameUpdate = async (name: string) => {
     if (!name.trim() || !pendingScore?.id) return;
 
@@ -133,7 +135,7 @@ const ArcadeLeaderboard = () => {
         setPendingScore(null);
 
         // Update the SWR cache to clear the pending score and re-fetch the main scores list.
-        mutate('/api/get-pending-score', null, false); // Instantly update cache to null
+        mutate('/api/get-pending-score', null, { revalidate: false }); // Instantly update local cache to null
         mutate(`/api/get-scores?gamemode=${selectedGame}`); // Re-fetch scores for the current game
       } else {
         console.error('Failed to update name');
