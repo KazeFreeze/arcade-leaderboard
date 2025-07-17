@@ -5,6 +5,9 @@ import React, { useState, useEffect } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { Trophy, Medal, Award, Crown, Zap, Star, RefreshCw } from 'lucide-react';
 
+// This line is added to ensure the page is always dynamically rendered on the server.
+export const dynamic = "force-dynamic";
+
 // Define the structure of a score object from your API
 interface Score {
   id: number;

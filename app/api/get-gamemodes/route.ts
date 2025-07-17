@@ -2,6 +2,10 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
+// This line forces the route to be rendered dynamically for every request.
+// This ensures that if a new game mode is added, it will appear immediately.
+export const dynamic = "force-dynamic";
+
 export const runtime = "edge";
 
 // Define a mapping from game ID to a more user-friendly name and an icon
@@ -21,7 +25,6 @@ export async function GET() {
     `;
 
     const formattedGames = rows.map((row) => {
-      // FIX: Explicitly type the 'l' parameter as a string to satisfy TypeScript's strict mode.
       const fallbackName = row.gamemode
         .replace(/-/g, " ")
         .replace(/\b\w/g, (l: string) => l.toUpperCase());

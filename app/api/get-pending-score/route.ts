@@ -1,8 +1,12 @@
 // app/api/get-pending-score/route.ts
-import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { sql } from "@/lib/db";
 
-export const runtime = 'edge';
+// This line forces the route to be rendered dynamically for every request.
+// This is critical for the modal to pop up as soon as a new score is submitted.
+export const dynamic = "force-dynamic";
+
+export const runtime = "edge";
 
 /**
  * This endpoint checks for a score that is pending a name assignment.
@@ -27,7 +31,10 @@ export async function GET() {
       return NextResponse.json(null);
     }
   } catch (error) {
-    console.error('Database Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch pending score' }, { status: 500 });
+    console.error("Database Error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch pending score" },
+      { status: 500 }
+    );
   }
 }

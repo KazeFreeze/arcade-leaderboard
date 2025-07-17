@@ -2,6 +2,10 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
+// This line forces the route to be rendered dynamically for every request.
+// This is the key to ensuring fresh data from the database.
+export const dynamic = "force-dynamic";
+
 export const runtime = "edge";
 
 export async function GET(request: Request) {
@@ -29,9 +33,9 @@ export async function GET(request: Request) {
       LIMIT 10;
     `;
 
-    // FIX: Return the response with headers that prevent caching.
-    // This ensures that every time scores are fetched (either on load or
-    // via the refresh button), the data comes directly from the database.
+    // While setting headers to prevent caching is good practice,
+    // `export const dynamic = "force-dynamic";` is the more modern and
+    // reliable way to handle this in the Next.js App Router.
     return NextResponse.json(rows, {
       status: 200,
       headers: {
