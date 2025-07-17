@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { Trophy, Medal, Award, Crown, Zap, Star } from 'lucide-react';
+import { Trophy, Medal, Award, Crown, Zap, Star, RefreshCw } from 'lucide-react';
 
 // Define the structure of a score object from your API
 interface Score {
@@ -67,6 +67,19 @@ const ArcadeLeaderboard = () => {
     dedupingInterval: 0,
   });
 
+  // DEBUGGING: Log fetched data and errors to the browser console
+  useEffect(() => {
+    console.log("Fetched games from API:", games);
+    if (gamesError) console.error("Error fetching games:", gamesError);
+  }, [games, gamesError]);
+
+  useEffect(() => {
+    if (selectedGame) {
+        console.log(`Fetched scores for gamemode '${selectedGame}':`, scores);
+        if (scoresError) console.error(`Error fetching scores for ${selectedGame}:`, scoresError);
+    }
+  }, [scores, scoresError, selectedGame]);
+
 
   // On initial page load, run a cleanup of any expired pending scores.
   useEffect(() => {
@@ -96,6 +109,7 @@ const ArcadeLeaderboard = () => {
   // Set the initial selected game once the game modes have loaded
   useEffect(() => {
     if (games && games.length > 0 && !selectedGame) {
+      console.log("Setting initial game to:", games[0].id);
       setSelectedGame(games[0].id);
     }
   }, [games, selectedGame]);
@@ -139,6 +153,15 @@ const ArcadeLeaderboard = () => {
     handleNameUpdate(randomName);
   };
 
+  // Function to manually refresh leaderboard data
+  const handleRefresh = () => {
+    console.log("Refreshing data...");
+    mutate('/api/get-gamemodes');
+    if (selectedGame) {
+      mutate(`/api/get-scores?gamemode=${selectedGame}`);
+    }
+  };
+
   const getRankColor = (rank: number) => {
     switch(rank) {
       case 1: return 'text-yellow-400 bg-yellow-400/20 border-yellow-400/50';
@@ -154,9 +177,9 @@ const ArcadeLeaderboard = () => {
   }
 
   // Loading and error states
-  if (gamesError) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-red-500">Error loading games.</div>
-  if (scoresError) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-red-500">Error loading scores.</div>
-  if (!games) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-cyan-400">Loading...</div>
+  if (gamesError) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-red-500">Error loading games. Check browser console for details.</div>
+  if (scoresError) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-red-500">Error loading scores. Check browser console for details.</div>
+  if (!games) return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-cyan-400">Loading Games...</div>
 
 
   return (
@@ -235,10 +258,15 @@ const ArcadeLeaderboard = () => {
         <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-3xl font-bold text-cyan-300 font-mono">
-              {games.find(g => g.id === selectedGame)?.name} LEADERBOARD
+              {games.find(g => g.id === selectedGame)?.name || 'LEADERBOARD'}
             </h2>
-            <div className="text-cyan-400 text-sm font-mono">
-              LAST UPDATED: {new Date().toLocaleTimeString()}
+            <div className="flex items-center gap-4">
+               <div className="text-cyan-400 text-sm font-mono">
+                 LAST UPDATED: {new Date().toLocaleTimeString()}
+               </div>
+               <button onClick={handleRefresh} className="text-cyan-400 hover:text-white transition-colors" title="Refresh Data">
+                 <RefreshCw className="w-5 h-5 animate-spin" style={{ animationDuration: '2s' }} />
+               </button>
             </div>
           </div>
 
@@ -250,12 +278,8 @@ const ArcadeLeaderboard = () => {
             <div className="col-span-3 text-center">DATE ACHIEVED</div>
           </div>
 
-          {/* Leaderboard Entries */}
           <div className="space-y-2">
-            {/* FIX: This logic now correctly handles the case where no games exist in the database,
-                preventing the UI from getting stuck on "Loading scores...". */}
             {games && games.length > 0 ? (
-              // If there are games, we proceed to handle the score states (loading, empty, or data).
               <>
                 {!scores ? (
                   <div className="text-center text-gray-400 py-8 col-span-12">Loading scores...</div>
@@ -290,7 +314,6 @@ const ArcadeLeaderboard = () => {
                 )}
               </>
             ) : (
-              // If there are no games in the database at all, we show a clear message.
               <div className="text-center text-gray-400 py-8 col-span-12">No games have been played yet. Be the first!</div>
             )}
           </div>

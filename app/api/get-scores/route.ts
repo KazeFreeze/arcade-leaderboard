@@ -16,12 +16,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    // FIX: The query has been updated.
-    // 1. The `AND name IS NOT NULL` condition has been removed. This ensures that all scores
-    //    for the selected gamemode are fetched, including those that are pending a name.
-    // 2. `COALESCE(name, 'PENDING...')` is used to ensure the `name` field is never null.
-    //    If a score has a null name (because it's pending), it will be displayed as 'PENDING...'.
-    //    This prevents the app from breaking and makes it clear a score is awaiting input.
     const { rows } = await sql`
       SELECT 
         id, 
@@ -34,7 +28,19 @@ export async function GET(request: Request) {
       ORDER BY score DESC
       LIMIT 10;
     `;
-    return NextResponse.json(rows);
+
+    // FIX: Return the response with headers that prevent caching.
+    // This ensures that every time scores are fetched (either on load or
+    // via the refresh button), the data comes directly from the database.
+    return NextResponse.json(rows, {
+      status: 200,
+      headers: {
+        "Cache-Control":
+          "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
   } catch (error) {
     console.error("Database Error:", error);
     return NextResponse.json(
