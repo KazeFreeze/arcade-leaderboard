@@ -66,18 +66,11 @@ const ArcadeLeaderboard = () => {
     refreshInterval: 5000, // Poll every 5 seconds
   });
 
-  /**
-   * FIX: This new useEffect hook runs once when the page loads.
-   * It calls a dedicated API endpoint to clean up any old, expired pending scores.
-   * This ensures that if a user previously got a high score but didn't enter their name,
-   * their score is automatically assigned a random name after a timeout,
-   * preventing the "Enter Name" modal from incorrectly appearing for new visitors.
-   */
+  // On initial page load, run a cleanup of any expired pending scores.
   useEffect(() => {
     const cleanupPendingScores = async () => {
       try {
         await fetch('/api/cleanup-pending', { method: 'POST' });
-        // After cleanup, revalidate the pending score data to ensure the UI is in sync.
         mutate('/api/get-pending-score');
       } catch (error) {
         console.error('Failed to cleanup pending scores:', error);
@@ -114,23 +107,34 @@ const ArcadeLeaderboard = () => {
     }
   }, [selectedGame]);
 
+  /**
+   * FIX: This function now correctly handles client-side state.
+   * The key change is using `mutate('/api/get-pending-score', null, false)`.
+   * This command does two things:
+   * 1. It immediately updates SWR's local cache for the 'get-pending-score' endpoint to `null`, removing the stale data.
+   * 2. It prevents an immediate re-fetch (`false`), which is more efficient since we know the correct state is `null`.
+   * This ensures that after submitting a name, the "ghost" pending score is instantly cleared from the UI and local cache,
+   * preventing the modal from reappearing incorrectly on subsequent renders or page loads.
+   */
   const handleNameUpdate = async (name: string) => {
-    if (!name.trim() || !pendingScore?.id) return; // Ensure name is not empty and pendingScore.id exists
+    if (!name.trim() || !pendingScore?.id) return;
 
     try {
       const res = await fetch('/api/update-name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, scoreId: pendingScore.id }), // Pass scoreId
+        body: JSON.stringify({ name, scoreId: pendingScore.id }),
       });
 
       if (res.ok) {
+        // Immediately clear the local state and close the modal for instant UI feedback.
         setIsModalOpen(false);
         setInputName('');
         setPendingScore(null);
-        // Revalidate the data to update the UI
-        mutate('/api/get-pending-score');
-        mutate(`/api/get-scores?gamemode=${selectedGame}`);
+
+        // Update the SWR cache to clear the pending score and re-fetch the main scores list.
+        mutate('/api/get-pending-score', null, false); // Instantly update cache to null
+        mutate(`/api/get-scores?gamemode=${selectedGame}`); // Re-fetch scores for the current game
       } else {
         console.error('Failed to update name');
       }
@@ -138,6 +142,7 @@ const ArcadeLeaderboard = () => {
       console.error('Error updating name:', error);
     }
   };
+
 
   const handleRandomizeName = () => {
     const randomName = generateRandomName();
