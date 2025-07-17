@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { resetTable } from "@/lib/db";
 
-export const runtime = "edge";
+// The 'runtime = edge' line has been removed to use the default Node.js runtime.
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
