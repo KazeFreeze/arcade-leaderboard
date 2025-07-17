@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
 // This line forces the route to be rendered dynamically for every request.
-// This is critical for the modal to pop up as soon as a new score is submitted.
 export const dynamic = "force-dynamic";
 
 export const runtime = "edge";
@@ -23,13 +22,19 @@ export async function GET() {
       LIMIT 1;
     `;
 
-    // If a pending score is found, return its details.
-    if (rows.length > 0) {
-      return NextResponse.json(rows[0]);
-    } else {
-      // If no score is pending, return null.
-      return NextResponse.json(null);
-    }
+    const data = rows.length > 0 ? rows[0] : null;
+
+    // Return the response with headers that explicitly prevent any caching.
+    // This is a more robust way to ensure data is always fresh.
+    return NextResponse.json(data, {
+      status: 200,
+      headers: {
+        "Cache-Control":
+          "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
   } catch (error) {
     console.error("Database Error:", error);
     return NextResponse.json(
