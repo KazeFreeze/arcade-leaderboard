@@ -3,20 +3,26 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { revalidatePath } from "next/cache"; // Import revalidatePath
 
-// The 'runtime = edge' line has been removed to use the default Node.js runtime.
-
+/**
+ * This endpoint is called by the admin page to add a test score.
+ *
+ * FIX: Added `revalidatePath`.
+ * When a test score was added, the server's cache for the leaderboard page wasn't being cleared.
+ * This meant you wouldn't see the new score until the cache expired or the page was manually refreshed.
+ * Calling `revalidatePath('/')` tells Next.js to immediately refetch the data for the homepage,
+ * ensuring the leaderboard is always up-to-date after you add a test score.
+ */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
-  // This is now the ONLY check.
   // @ts-ignore
   if (!session || !session.user?.isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    // We no longer get the password from the request body.
     const { name, score, gamemode } = await request.json();
 
     if (!name || typeof score !== "number" || !gamemode) {
@@ -30,6 +36,9 @@ export async function POST(request: Request) {
       INSERT INTO leaderboard (name, score, gamemode, datetime, pending_name, created_at)
       VALUES (${name}, ${score}, ${gamemode}, NOW(), FALSE, NOW());
     `;
+
+    // Revalidate the homepage path to ensure the leaderboard updates
+    revalidatePath("/");
 
     return NextResponse.json({ message: "Test score added successfully" });
   } catch (error) {
