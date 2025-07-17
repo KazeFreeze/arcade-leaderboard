@@ -43,6 +43,7 @@ const ArcadeLeaderboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingScore, setPendingScore] = useState<PendingScore | null>(null);
   const [inputName, setInputName] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false); // 1. State to track refresh status
   
   const { mutate } = useSWRConfig();
   const { data: games, error: gamesError } = useSWR<Game[]>('/api/get-gamemodes', fetcher);
@@ -50,8 +51,9 @@ const ArcadeLeaderboard = () => {
     selectedGame ? `/api/get-scores?gamemode=${selectedGame}` : null,
     fetcher
   );
+  
+  // 2. Removed `refreshInterval` to stop automatic polling
   const { data: fetchedPendingScore } = useSWR<PendingScore | null>('/api/get-pending-score', fetcher, {
-    refreshInterval: 5000,
     revalidateOnMount: true,
     dedupingInterval: 0,
   });
@@ -119,10 +121,21 @@ const ArcadeLeaderboard = () => {
     handleNameUpdate(randomName);
   };
 
-  const handleRefresh = () => {
-    mutate('/api/get-gamemodes');
-    if (selectedGame) {
-      mutate(`/api/get-scores?gamemode=${selectedGame}`);
+  // 3. Updated refresh handler to be async, manage loading state, and fetch all data.
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      // Re-fetch all data sources manually
+      await Promise.all([
+        mutate('/api/get-gamemodes'),
+        mutate('/api/get-pending-score'),
+        selectedGame ? mutate(`/api/get-scores?gamemode=${selectedGame}`) : Promise.resolve()
+      ]);
+    } catch (error) {
+        console.error("Failed to refresh data:", error);
+    } finally {
+        setIsRefreshing(false);
     }
   };
 
@@ -145,8 +158,6 @@ const ArcadeLeaderboard = () => {
   if (!games) return <div className="flex items-center justify-center min-h-screen text-cyan-400">Loading Games...</div>
 
   return (
-    // 1. Removed background gradient and min-h-screen, as this is now handled globally.
-    //    Applied the new font class.
     <div className="p-4 font-arcade">
       {isModalOpen && pendingScore && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-md">
@@ -174,11 +185,8 @@ const ArcadeLeaderboard = () => {
         </div>
       )}
 
-      {/* 2. Removed the decorative blurred divs, as the new background animation replaces them. */}
-
       <div className="max-w-6xl mx-auto relative z-10">
         <div className="text-center mb-8">
-          {/* 3. Added padding-bottom (pb-4) to fix the 'g' being clipped. Also made text size responsive. */}
           <h1 className="text-6xl md:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 mb-4 pb-4 animate-pulse">
             Laser Target Game
           </h1>
@@ -207,8 +215,9 @@ const ArcadeLeaderboard = () => {
                <div className="text-cyan-400 text-sm font-arcade">
                  LAST UPDATED: {new Date().toLocaleTimeString()}
                </div>
-               <button onClick={handleRefresh} className="text-cyan-400 hover:text-white transition-colors" title="Refresh Data">
-                 <RefreshCw className="w-5 h-5 animate-spin" style={{ animationDuration: '2s' }} />
+               <button onClick={handleRefresh} className="text-cyan-400 hover:text-white transition-colors disabled:opacity-50" title="Refresh Data" disabled={isRefreshing}>
+                 {/* 4. Icon now only spins when refreshing */}
+                 <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} style={{ animationDuration: '2s' }} />
                </button>
             </div>
           </div>
