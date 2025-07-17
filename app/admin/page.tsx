@@ -1,8 +1,19 @@
 // app/admin/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Shield, Trash2, PlusCircle, AlertTriangle, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
+import { Shield, Trash2, PlusCircle, AlertTriangle, CheckCircle, Gamepad2 } from 'lucide-react';
+
+// Define the structure for a game mode from your API
+interface Game {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+// Fetcher function for SWR
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const AdminPage = () => {
   const [password, setPassword] = useState('');
@@ -12,13 +23,29 @@ const AdminPage = () => {
   // State for the test score form
   const [testName, setTestName] = useState('');
   const [testScore, setTestScore] = useState('');
-  const [testGamemode, setTestGamemode] = useState('pac-man');
+  const [selectedGamemode, setSelectedGamemode] = useState('');
+  const [newGamemode, setNewGamemode] = useState('');
+  const [isAddingNewGamemode, setIsAddingNewGamemode] = useState(false);
+  
+  const { mutate } = useSWRConfig();
+
+  // Fetch available game modes for the dropdown
+  const { data: gamemodes, error: gamemodesError } = useSWR<Game[]>('/api/get-gamemodes', fetcher);
+
+  // Set the initial selected game mode once they have loaded
+  useEffect(() => {
+    if (gamemodes && gamemodes.length > 0 && !selectedGamemode) {
+      setSelectedGamemode(gamemodes[0].id);
+    }
+  }, [gamemodes, selectedGamemode]);
+
 
   const handleResetDatabase = async () => {
     if (!password) {
       setMessage({ type: 'error', text: 'Password is required to perform this action.' });
       return;
     }
+    // Using a custom modal/confirm is better, but for an admin panel, this is acceptable.
     if (!confirm('Are you sure you want to reset the entire database? This action cannot be undone.')) {
       return;
     }
@@ -37,6 +64,7 @@ const AdminPage = () => {
 
       if (response.ok) {
         setMessage({ type: 'success', text: 'Database has been successfully reset!' });
+        mutate('/api/get-gamemodes'); // Re-fetch gamemodes
       } else {
         setMessage({ type: 'error', text: data.error || 'An unknown error occurred.' });
       }
@@ -54,6 +82,13 @@ const AdminPage = () => {
       return;
     }
 
+    const gamemodeToSubmit = isAddingNewGamemode ? newGamemode.trim().toLowerCase().replace(/\s+/g, '-') : selectedGamemode;
+
+    if (!gamemodeToSubmit) {
+       setMessage({ type: 'error', text: 'Gamemode is required.' });
+       return;
+    }
+
     setIsLoading(true);
     setMessage(null);
 
@@ -65,7 +100,7 @@ const AdminPage = () => {
           password,
           name: testName,
           score: parseInt(testScore, 10),
-          gamemode: testGamemode,
+          gamemode: gamemodeToSubmit,
         }),
       });
 
@@ -76,6 +111,11 @@ const AdminPage = () => {
         // Clear form
         setTestName('');
         setTestScore('');
+        setNewGamemode('');
+        if (isAddingNewGamemode) {
+          mutate('/api/get-gamemodes'); // Re-fetch gamemodes if a new one was added
+          setIsAddingNewGamemode(false); // Switch back to dropdown
+        }
       } else {
         setMessage({ type: 'error', text: data.error || 'An unknown error occurred.' });
       }
@@ -165,18 +205,49 @@ const AdminPage = () => {
                   required
                   className="w-full bg-gray-800 border-2 border-gray-600 rounded-lg p-3 text-white font-mono focus:outline-none focus:ring-2 focus:ring-cyan-400"
                 />
-                <select
-                  value={testGamemode}
-                  onChange={(e) => setTestGamemode(e.target.value)}
-                  required
-                  className="w-full bg-gray-800 border-2 border-gray-600 rounded-lg p-3 text-white font-mono focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                >
-                  <option value="pac-man">PAC-MAN</option>
-                  <option value="space-invaders">SPACE INVADERS</option>
-                  <option value="tetris">TETRIS</option>
-                  <option value="asteroids">ASTEROIDS</option>
-                  <option value="frogger">FROGGER</option>
-                </select>
+                
+                {/* Gamemode Selection Logic */}
+                <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-600">
+                    <div className="flex items-center justify-between mb-3">
+                        <label className="flex items-center gap-2 text-cyan-300 font-mono">
+                            <Gamepad2 size={20}/>
+                            Gamemode
+                        </label>
+                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={isAddingNewGamemode}
+                                onChange={() => setIsAddingNewGamemode(!isAddingNewGamemode)}
+                                className="form-checkbox h-5 w-5 bg-gray-700 border-gray-500 text-cyan-500 rounded focus:ring-cyan-400"
+                            />
+                            <span>Add New</span>
+                        </label>
+                    </div>
+
+                    {isAddingNewGamemode ? (
+                        <input
+                            type="text"
+                            value={newGamemode}
+                            onChange={(e) => setNewGamemode(e.target.value)}
+                            placeholder="Enter New Gamemode Name"
+                            required
+                            className="w-full bg-gray-700 border-2 border-gray-500 rounded-lg p-3 text-white font-mono focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        />
+                    ) : (
+                        <select
+                            value={selectedGamemode}
+                            onChange={(e) => setSelectedGamemode(e.target.value)}
+                            required={!isAddingNewGamemode}
+                            disabled={gamemodesError || !gamemodes}
+                            className="w-full bg-gray-700 border-2 border-gray-500 rounded-lg p-3 text-white font-mono focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        >
+                            {gamemodes ? gamemodes.map(game => (
+                                <option key={game.id} value={game.id}>{game.name}</option>
+                            )) : <option>Loading...</option>}
+                        </select>
+                    )}
+                </div>
+
                 <button
                   type="submit"
                   disabled={isLoading}

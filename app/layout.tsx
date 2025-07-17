@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import NextAuthProvider from "./components/SessionProvider"; // Import the provider
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +23,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
       </head>
-      <body className={`${inter.className} bg-arcade-bg text-white`}>{children}</body>
+      <body className={`${inter.className} bg-arcade-bg text-white`}>
+        {/* Wrap the children with the session provider */}
+        <NextAuthProvider>{children}</NextAuthProvider>
+      </body>
     </html>
   );
 }
