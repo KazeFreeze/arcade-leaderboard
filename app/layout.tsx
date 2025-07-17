@@ -7,8 +7,8 @@ import NextAuthProvider from "./components/SessionProvider"; // Import the provi
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Arcade Gun Game Leaderboard",
-  description: "High scores from the DIY arcade gun game",
+  title: "Laser Target Game Leaderboard",
+  description: "High scores from the DIY laser target game",
 };
 
 export default function RootLayout({

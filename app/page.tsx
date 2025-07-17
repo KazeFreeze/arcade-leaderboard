@@ -66,6 +66,27 @@ const ArcadeLeaderboard = () => {
     refreshInterval: 5000, // Poll every 5 seconds
   });
 
+  /**
+   * FIX: This new useEffect hook runs once when the page loads.
+   * It calls a dedicated API endpoint to clean up any old, expired pending scores.
+   * This ensures that if a user previously got a high score but didn't enter their name,
+   * their score is automatically assigned a random name after a timeout,
+   * preventing the "Enter Name" modal from incorrectly appearing for new visitors.
+   */
+  useEffect(() => {
+    const cleanupPendingScores = async () => {
+      try {
+        await fetch('/api/cleanup-pending', { method: 'POST' });
+        // After cleanup, revalidate the pending score data to ensure the UI is in sync.
+        mutate('/api/get-pending-score');
+      } catch (error) {
+        console.error('Failed to cleanup pending scores:', error);
+      }
+    };
+    cleanupPendingScores();
+  }, [mutate]);
+
+
   // Effect to open the modal when a pending score is detected
   useEffect(() => {
     if (fetchedPendingScore && fetchedPendingScore.id) {
