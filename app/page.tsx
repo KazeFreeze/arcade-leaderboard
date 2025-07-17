@@ -61,18 +61,10 @@ const ArcadeLeaderboard = () => {
     fetcher
   );
 
-  /**
-   * FIX: The SWR hook for polling the pending score has been updated.
-   * `revalidateOnMount: true` explicitly tells SWR to fetch data when the component loads.
-   * `dedupingInterval: 0` is the key change. It prevents SWR from serving cached data
-   * on initial load, forcing it to make a fresh request to the API immediately.
-   * This ensures that if a pending score was deleted from the database, the UI won't
-   * incorrectly show the modal based on stale, cached data.
-   */
   const { data: fetchedPendingScore } = useSWR<PendingScore | null>('/api/get-pending-score', fetcher, {
-    refreshInterval: 5000,   // Continue polling every 5 seconds
-    revalidateOnMount: true, // Explicitly revalidate on mount
-    dedupingInterval: 0,     // Force re-fetch on load, bypassing cache deduping
+    refreshInterval: 5000,
+    revalidateOnMount: true,
+    dedupingInterval: 0,
   });
 
 
@@ -81,7 +73,6 @@ const ArcadeLeaderboard = () => {
     const cleanupPendingScores = async () => {
       try {
         await fetch('/api/cleanup-pending', { method: 'POST' });
-        // After cleanup, trigger a re-fetch of the pending score state.
         mutate('/api/get-pending-score');
       } catch (error) {
         console.error('Failed to cleanup pending scores:', error);
@@ -129,14 +120,11 @@ const ArcadeLeaderboard = () => {
       });
 
       if (res.ok) {
-        // Immediately clear the local state and close the modal for instant UI feedback.
         setIsModalOpen(false);
         setInputName('');
         setPendingScore(null);
-
-        // Update the SWR cache to clear the pending score and re-fetch the main scores list.
-        mutate('/api/get-pending-score', null, { revalidate: false }); // Instantly update local cache to null
-        mutate(`/api/get-scores?gamemode=${selectedGame}`); // Re-fetch scores for the current game
+        mutate('/api/get-pending-score', null, { revalidate: false });
+        mutate(`/api/get-scores?gamemode=${selectedGame}`);
       } else {
         console.error('Failed to update name');
       }
@@ -160,7 +148,6 @@ const ArcadeLeaderboard = () => {
     }
   };
 
-  // Helper to get game icon, with a fallback
   const getGameIcon = (gameId: string) => {
     const game = games?.find(g => g.id === gameId);
     return game ? game.icon : '🕹️';
@@ -174,7 +161,6 @@ const ArcadeLeaderboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 font-sans">
-      {/* Name Input Modal */}
       {isModalOpen && pendingScore && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-md">
           <div className="bg-gray-900 border-2 border-cyan-500 rounded-2xl p-8 shadow-lg shadow-cyan-500/50 text-center max-w-md w-full m-4">
@@ -211,7 +197,6 @@ const ArcadeLeaderboard = () => {
         </div>
       )}
 
-      {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-500/10 rounded-full blur-xl animate-pulse"></div>
         <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl animate-pulse delay-1000"></div>
@@ -219,7 +204,6 @@ const ArcadeLeaderboard = () => {
       </div>
 
       <div className="max-w-6xl mx-auto relative z-10">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 mb-4 animate-pulse">
             Laser Target Game
@@ -231,7 +215,6 @@ const ArcadeLeaderboard = () => {
           </div>
         </div>
 
-        {/* Game Selection */}
         <div className="flex flex-wrap justify-center gap-4 mb-8">
           {games.map((game) => (
             <button
@@ -249,7 +232,6 @@ const ArcadeLeaderboard = () => {
           ))}
         </div>
 
-        {/* Leaderboard */}
         <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-3xl font-bold text-cyan-300 font-mono">
@@ -260,7 +242,6 @@ const ArcadeLeaderboard = () => {
             </div>
           </div>
 
-          {/* Leaderboard Header - Updated Layout */}
           <div className="grid grid-cols-12 gap-4 mb-4 text-cyan-300 font-bold text-sm uppercase tracking-wider border-b border-cyan-500/30 pb-2">
             <div className="col-span-1 text-center">RANK</div>
             <div className="col-span-4">PLAYER</div>
@@ -271,37 +252,41 @@ const ArcadeLeaderboard = () => {
 
           {/* Leaderboard Entries */}
           <div className="space-y-2">
-            {scores ? scores.map((entry, index) => (
-              <div
-                key={entry.id}
-                className={`grid grid-cols-12 gap-4 items-center p-4 rounded-lg border transition-all duration-500 hover:scale-105 ${
-                  getRankColor(index + 1)
-                } ${animateScores ? 'animate-pulse' : ''}`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="col-span-1 text-center font-bold text-2xl">
-                  #{index + 1}
-                </div>
-                <div className="col-span-4 font-mono text-lg font-bold">
-                  {entry.name}
-                </div>
-                <div className="col-span-2 text-right font-mono text-xl font-bold">
-                  {entry.score.toLocaleString()}
-                </div>
-                <div className="col-span-2 text-center font-mono text-sm">
-                  {entry.gamemode}
-                </div>
-                <div className="col-span-3 text-center font-mono text-sm">
-                  {new Date(entry.datetime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                </div>
-              </div>
-            )) : <div className="text-center text-gray-400 py-8">Loading scores...</div>}
-             {scores && scores.length === 0 && (
+            {/* FIX: Refactored the rendering logic for clarity and correctness. */}
+            {/* This new structure cleanly handles the three states: loading, empty, and data available. */}
+            {!scores ? (
+              <div className="text-center text-gray-400 py-8 col-span-12">Loading scores...</div>
+            ) : scores.length === 0 ? (
               <div className="text-center text-gray-400 py-8 col-span-12">No scores recorded for this game yet. Be the first!</div>
+            ) : (
+              scores.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  className={`grid grid-cols-12 gap-4 items-center p-4 rounded-lg border transition-all duration-500 hover:scale-105 ${
+                    getRankColor(index + 1)
+                  } ${animateScores ? 'animate-pulse' : ''}`}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className="col-span-1 text-center font-bold text-2xl">
+                    #{index + 1}
+                  </div>
+                  <div className="col-span-4 font-mono text-lg font-bold">
+                    {entry.name}
+                  </div>
+                  <div className="col-span-2 text-right font-mono text-xl font-bold">
+                    {entry.score.toLocaleString()}
+                  </div>
+                  <div className="col-span-2 text-center font-mono text-sm">
+                    {entry.gamemode}
+                  </div>
+                  <div className="col-span-3 text-center font-mono text-sm">
+                    {new Date(entry.datetime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+              ))
             )}
           </div>
           
-          {/* Footer - Updated */}
           <div className="mt-8 text-center text-cyan-400 text-sm font-mono">
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <span>🏆 HALL OF FAME 🏆</span>
@@ -313,7 +298,6 @@ const ArcadeLeaderboard = () => {
           </div>
         </div>
 
-        {/* Additional Info Panel */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-black/30 backdrop-blur-sm rounded-lg border border-purple-500/30 p-4 text-center">
             <div className="text-purple-400 text-2xl font-bold">
