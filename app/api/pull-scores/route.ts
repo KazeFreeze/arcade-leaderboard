@@ -4,7 +4,17 @@ import { sql } from "@/lib/db";
 import mqtt from "mqtt"; // The new MQTT client library
 import { revalidatePath } from "next/cache";
 
+// ROUTE SEGMENT CONFIG: Force dynamic rendering and disable all caching.
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+// Define cache-control headers to be reused in responses.
+const CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  Pragma: "no-cache",
+  Expires: "0",
+};
 
 /**
  * This function connects to the MQTT broker to "pull" the latest score.
@@ -90,9 +100,12 @@ export async function POST() {
 
     // If no new score was pulled (no retained message), exit successfully.
     if (!scoreData) {
-      return NextResponse.json({
-        message: "No new score available from MQTT.",
-      });
+      return NextResponse.json(
+        {
+          message: "No new score available from MQTT.",
+        },
+        { headers: CACHE_HEADERS }
+      );
     }
 
     const { score, gamemode } = scoreData;
@@ -100,7 +113,7 @@ export async function POST() {
     if (typeof score !== "number" || !gamemode) {
       return NextResponse.json(
         { error: "Invalid score data from MQTT" },
-        { status: 400 }
+        { status: 400, headers: CACHE_HEADERS }
       );
     }
 
@@ -113,9 +126,12 @@ export async function POST() {
         `;
 
     if (recentScores.length > 0) {
-      return NextResponse.json({
-        message: "Score already processed recently.",
-      });
+      return NextResponse.json(
+        {
+          message: "Score already processed recently.",
+        },
+        { headers: CACHE_HEADERS }
+      );
     }
 
     // Insert the new score into the database and mark it as pending a name.
@@ -127,14 +143,17 @@ export async function POST() {
     // Revalidate the path to trigger the modal on the client.
     revalidatePath("/");
 
-    return NextResponse.json({
-      message: "Score pulled and added successfully",
-    });
+    return NextResponse.json(
+      {
+        message: "Score pulled and added successfully",
+      },
+      { headers: CACHE_HEADERS }
+    );
   } catch (error) {
     console.error("Error in /api/pull-scores:", (error as Error).message);
     return NextResponse.json(
       { error: `Failed to pull score from MQTT: ${(error as Error).message}` },
-      { status: 500 }
+      { status: 500, headers: CACHE_HEADERS }
     );
   }
 }
