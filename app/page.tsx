@@ -17,7 +17,7 @@ interface Score {
 // Define the structure for a game mode from your API
 interface Game {
   id: string;
-  name: string;
+  name:string;
   icon: string;
 }
 
@@ -252,38 +252,46 @@ const ArcadeLeaderboard = () => {
 
           {/* Leaderboard Entries */}
           <div className="space-y-2">
-            {/* FIX: Refactored the rendering logic for clarity and correctness. */}
-            {/* This new structure cleanly handles the three states: loading, empty, and data available. */}
-            {!scores ? (
-              <div className="text-center text-gray-400 py-8 col-span-12">Loading scores...</div>
-            ) : scores.length === 0 ? (
-              <div className="text-center text-gray-400 py-8 col-span-12">No scores recorded for this game yet. Be the first!</div>
+            {/* FIX: This logic now correctly handles the case where no games exist in the database,
+                preventing the UI from getting stuck on "Loading scores...". */}
+            {games && games.length > 0 ? (
+              // If there are games, we proceed to handle the score states (loading, empty, or data).
+              <>
+                {!scores ? (
+                  <div className="text-center text-gray-400 py-8 col-span-12">Loading scores...</div>
+                ) : scores.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8 col-span-12">No scores recorded for this game yet. Be the first!</div>
+                ) : (
+                  scores.map((entry, index) => (
+                    <div
+                      key={entry.id}
+                      className={`grid grid-cols-12 gap-4 items-center p-4 rounded-lg border transition-all duration-500 hover:scale-105 ${
+                        getRankColor(index + 1)
+                      } ${animateScores ? 'animate-pulse' : ''}`}
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <div className="col-span-1 text-center font-bold text-2xl">
+                        #{index + 1}
+                      </div>
+                      <div className="col-span-4 font-mono text-lg font-bold">
+                        {entry.name}
+                      </div>
+                      <div className="col-span-2 text-right font-mono text-xl font-bold">
+                        {entry.score.toLocaleString()}
+                      </div>
+                      <div className="col-span-2 text-center font-mono text-sm">
+                        {entry.gamemode}
+                      </div>
+                      <div className="col-span-3 text-center font-mono text-sm">
+                        {new Date(entry.datetime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </>
             ) : (
-              scores.map((entry, index) => (
-                <div
-                  key={entry.id}
-                  className={`grid grid-cols-12 gap-4 items-center p-4 rounded-lg border transition-all duration-500 hover:scale-105 ${
-                    getRankColor(index + 1)
-                  } ${animateScores ? 'animate-pulse' : ''}`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className="col-span-1 text-center font-bold text-2xl">
-                    #{index + 1}
-                  </div>
-                  <div className="col-span-4 font-mono text-lg font-bold">
-                    {entry.name}
-                  </div>
-                  <div className="col-span-2 text-right font-mono text-xl font-bold">
-                    {entry.score.toLocaleString()}
-                  </div>
-                  <div className="col-span-2 text-center font-mono text-sm">
-                    {entry.gamemode}
-                  </div>
-                  <div className="col-span-3 text-center font-mono text-sm">
-                    {new Date(entry.datetime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </div>
-                </div>
-              ))
+              // If there are no games in the database at all, we show a clear message.
+              <div className="text-center text-gray-400 py-8 col-span-12">No games have been played yet. Be the first!</div>
             )}
           </div>
           
