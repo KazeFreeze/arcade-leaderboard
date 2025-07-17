@@ -2,18 +2,15 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
-// This line forces the route to be rendered dynamically for every request.
+// ROUTE SEGMENT CONFIG: Force dynamic rendering and disable all caching.
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export const runtime = "edge";
 
-/**
- * This endpoint checks for a score that is pending a name assignment.
- * It's polled by the frontend to see if the name input modal should be displayed.
- */
 export async function GET() {
   try {
-    // Find the latest score that has the 'pending_name' flag set to true.
     const { rows } = await sql`
       SELECT id, score, gamemode, created_at 
       FROM leaderboard 
@@ -24,8 +21,7 @@ export async function GET() {
 
     const data = rows.length > 0 ? rows[0] : null;
 
-    // Return the response with headers that explicitly prevent any caching.
-    // This is a more robust way to ensure data is always fresh.
+    // API RESPONSE HEADERS: Explicitly tell browsers and proxies not to cache.
     return NextResponse.json(data, {
       status: 200,
       headers: {

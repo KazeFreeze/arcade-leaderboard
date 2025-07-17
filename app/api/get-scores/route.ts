@@ -2,9 +2,10 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
-// This line forces the route to be rendered dynamically for every request.
-// This is the key to ensuring fresh data from the database.
+// ROUTE SEGMENT CONFIG: Force dynamic rendering and disable all caching.
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export const runtime = "edge";
 
@@ -33,9 +34,7 @@ export async function GET(request: Request) {
       LIMIT 10;
     `;
 
-    // While setting headers to prevent caching is good practice,
-    // `export const dynamic = "force-dynamic";` is the more modern and
-    // reliable way to handle this in the Next.js App Router.
+    // API RESPONSE HEADERS: Explicitly tell browsers and proxies not to cache.
     return NextResponse.json(rows, {
       status: 200,
       headers: {
