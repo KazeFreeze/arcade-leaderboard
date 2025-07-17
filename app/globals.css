@@ -3,38 +3,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Importing the font here is an alternative, but using next/font in layout.tsx 
-  is generally better for performance in Next.js projects.
-  The custom classes below are still useful.
-*/
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+/* 1. Remove the old font import, as it's now handled in layout.tsx */
+
+/* 2. Set the static background image for the bottom layer */
+body {
+  /* YOU CAN CHANGE THE BACKGROUND IMAGE URL HERE */
+  background-image: url("https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* Keeps the image fixed during scroll */
+}
+
+/* 3. Style the canvas for the background animation (middle layer) */
+#background-animation-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* Sits on top of the body background */
+  pointer-events: none; /* Allows clicks to pass through to content */
+}
+
+/* 4. Style the main content wrapper (top layer) */
+.main-content {
+  position: relative;
+  z-index: 2; /* Sits on top of the animation canvas */
+  /* Add a subtle dark overlay to make text more readable over the background */
+  background-color: rgba(10, 10, 10, 0.5);
+  min-height: 100vh;
+}
 
 @layer components {
-  /* This class can be used as a fallback or for specific elements, 
-    but the primary font is now set in layout.tsx.
-  */
-  .arcade-font {
-      font-family: 'Orbitron', monospace;
-  }
-
   /* Custom utility for a neon glow effect */
   .neon-glow {
-      text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor,
+      0 0 30px currentColor;
   }
 
   /* Custom animation class for a slower pulse */
   .pulse-slow {
-      animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-  
+
   /* Custom animation class for a floating effect */
   .float {
-      animation: float 6s ease-in-out infinite;
+    animation: float 6s ease-in-out infinite;
   }
 
   /* Keyframes for the float animation */
   @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-20px); }
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
   }
 }

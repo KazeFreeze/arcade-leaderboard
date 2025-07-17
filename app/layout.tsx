@@ -1,10 +1,16 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { VT323 } from "next/font/google"; // 1. Import the new retro font
 import "./globals.css";
-import NextAuthProvider from "./components/SessionProvider"; // Import the provider
+import NextAuthProvider from "./components/SessionProvider";
+import BackgroundAnimation from "./components/BackgroundAnimation"; // 2. Import the new animation component
 
-const inter = Inter({ subsets: ["latin"] });
+// 3. Configure the new font for optimal performance with next/font
+const vt323 = VT323({
+  subsets: ["latin"],
+  weight: "400", // This font only has one weight
+  variable: '--font-vt323', // 4. Set it up as a CSS variable
+});
 
 export const metadata: Metadata = {
   title: "Laser Target Game Leaderboard",
@@ -19,13 +25,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+        {/* Font <link> tags are no longer needed here, next/font handles it */}
       </head>
-      <body className={`${inter.className} bg-arcade-bg text-white`}>
-        {/* Wrap the children with the session provider */}
-        <NextAuthProvider>{children}</NextAuthProvider>
+      {/* 5. Apply the font variable to the whole app */}
+      <body className={`${vt323.variable} font-arcade text-white`}>
+        {/* 6. Render the background animation canvas behind the content */}
+        <BackgroundAnimation />
+        
+        {/* 7. Wrap main content to place it on the top layer (z-index: 2) */}
+        <main className="main-content">
+          <NextAuthProvider>{children}</NextAuthProvider>
+        </main>
       </body>
     </html>
   );
