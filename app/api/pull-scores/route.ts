@@ -13,13 +13,28 @@ export const dynamic = "force-dynamic";
  */
 function fetchLatestScoreFromMQTT(): Promise<any> {
   return new Promise((resolve, reject) => {
+    const brokerHost = process.env.MQTT_BROKER_URL;
+
+    // Check if the broker URL is defined in your environment variables.
+    if (!brokerHost) {
+      return reject(
+        new Error("MQTT_BROKER_URL is not defined in environment variables.")
+      );
+    }
+
+    // FIX: Vercel Edge Functions require a WebSocket connection ('wss').
+    // We construct the full URL with the correct protocol and port for HiveMQ Cloud.
+    const fullBrokerUrl = `wss://${brokerHost}:8884/mqtt`;
+
     const options: mqtt.IClientOptions = {
       username: process.env.MQTT_USERNAME,
       password: process.env.MQTT_PASSWORD,
       reconnectPeriod: 0, // Do not attempt to reconnect
+      // The protocol is now part of the URL, so no need for extra options here.
     };
 
-    const client = mqtt.connect(process.env.MQTT_BROKER_URL!, options);
+    // Connect using the full WebSocket URL.
+    const client = mqtt.connect(fullBrokerUrl, options);
 
     // Set a timeout for the entire operation to prevent it from hanging.
     const operationTimeout = setTimeout(() => {
@@ -56,6 +71,7 @@ function fetchLatestScoreFromMQTT(): Promise<any> {
     });
 
     client.on("error", (err) => {
+      // The 'Missing protocol' error originates here if the URL is bad.
       reject(err);
       client.end(true);
     });
