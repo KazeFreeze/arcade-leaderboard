@@ -43,7 +43,7 @@ const ArcadeLeaderboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingScore, setPendingScore] = useState<PendingScore | null>(null);
   const [inputName, setInputName] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false); // 1. State to track refresh status
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const { mutate } = useSWRConfig();
   const { data: games, error: gamesError } = useSWR<Game[]>('/api/get-gamemodes', fetcher);
@@ -52,24 +52,45 @@ const ArcadeLeaderboard = () => {
     fetcher
   );
   
-  // 2. Removed `refreshInterval` to stop automatic polling
   const { data: fetchedPendingScore } = useSWR<PendingScore | null>('/api/get-pending-score', fetcher, {
     revalidateOnMount: true,
     dedupingInterval: 0,
   });
 
-  useEffect(() => {
-    const cleanupPendingScores = async () => {
-      try {
-        await fetch('/api/cleanup-pending', { method: 'POST' });
-        mutate('/api/get-pending-score');
-      } catch (error) {
-        console.error('Failed to cleanup pending scores:', error);
-      }
-    };
-    cleanupPendingScores();
-  }, [mutate]);
+  /**
+   * This function now orchestrates the entire "pull" and refresh sequence.
+   */
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      // 1. Actively pull the latest score from MQTT. The API endpoint handles
+      // connecting, fetching the retained message, and adding it to the DB.
+      await fetch('/api/pull-scores', { method: 'POST' });
 
+      // 2. Run the cleanup task for any old, expired pending scores.
+      await fetch('/api/cleanup-pending', { method: 'POST' });
+
+      // 3. Finally, re-fetch all data from our database to update the UI.
+      await Promise.all([
+        mutate('/api/get-gamemodes'),
+        mutate('/api/get-pending-score'),
+        selectedGame ? mutate(`/api/get-scores?gamemode=${selectedGame}`) : Promise.resolve()
+      ]);
+    } catch (error) {
+        console.error("Failed to refresh data:", error);
+    } finally {
+        setIsRefreshing(false);
+    }
+  };
+
+  // This useEffect hook runs the handleRefresh logic when the component first loads.
+  useEffect(() => {
+    handleRefresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only on mount
+
+  // This useEffect reacts to the pending score data fetched by SWR.
   useEffect(() => {
     if (fetchedPendingScore && fetchedPendingScore.id) {
       setPendingScore(fetchedPendingScore);
@@ -119,24 +140,6 @@ const ArcadeLeaderboard = () => {
   const handleRandomizeName = () => {
     const randomName = generateRandomName();
     handleNameUpdate(randomName);
-  };
-
-  // 3. Updated refresh handler to be async, manage loading state, and fetch all data.
-  const handleRefresh = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      // Re-fetch all data sources manually
-      await Promise.all([
-        mutate('/api/get-gamemodes'),
-        mutate('/api/get-pending-score'),
-        selectedGame ? mutate(`/api/get-scores?gamemode=${selectedGame}`) : Promise.resolve()
-      ]);
-    } catch (error) {
-        console.error("Failed to refresh data:", error);
-    } finally {
-        setIsRefreshing(false);
-    }
   };
 
   const getRankColor = (rank: number) => {
@@ -216,7 +219,6 @@ const ArcadeLeaderboard = () => {
                  LAST UPDATED: {new Date().toLocaleTimeString()}
                </div>
                <button onClick={handleRefresh} className="text-cyan-400 hover:text-white transition-colors disabled:opacity-50" title="Refresh Data" disabled={isRefreshing}>
-                 {/* 4. Icon now only spins when refreshing */}
                  <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} style={{ animationDuration: '2s' }} />
                </button>
             </div>
