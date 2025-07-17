@@ -1,19 +1,23 @@
 // app/api/admin/add-test-score/route.ts
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { sql } from "@/lib/db";
 
 export const runtime = "edge";
 
 export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+
+  // This is now the ONLY check.
+  if (!session || session.user?.email !== process.env.ADMIN_EMAIL) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const { password, name, score, gamemode } = await request.json();
+    // We no longer get the password from the request body.
+    const { name, score, gamemode } = await request.json();
 
-    // Authenticate the request
-    if (password !== process.env.ADMIN_PASSWORD) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Validate input
     if (!name || typeof score !== "number" || !gamemode) {
       return NextResponse.json(
         { error: "Missing required fields: name, score, gamemode" },
@@ -21,8 +25,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert the test score into the database
-    // We set a current timestamp for datetime and created_at, and pending_name is false
     await sql`
       INSERT INTO leaderboard (name, score, gamemode, datetime, pending_name, created_at)
       VALUES (${name}, ${score}, ${gamemode}, NOW(), FALSE, NOW());
