@@ -1,11 +1,8 @@
 // lib/db.ts
 import { sql } from '@vercel/postgres';
 
+// This function creates the table if it doesn't exist.
 export async function createTable() {
-  // Creates the leaderboard table if it doesn't exist.
-  // The name can be null until it's assigned.
-  // A 'pending_name' flag is used to identify the score waiting for a name.
-  // 'created_at' stores the timestamp of the score.
   await sql`
     CREATE TABLE IF NOT EXISTS leaderboard (
       id SERIAL PRIMARY KEY,
@@ -18,5 +15,12 @@ export async function createTable() {
     );
   `;
 }
+
+// This new function will drop the existing table and create a new one.
+export async function resetTable() {
+  await sql`DROP TABLE IF EXISTS leaderboard;`;
+  await createTable();
+}
+
 
 export { sql };
