@@ -21,9 +21,9 @@ const AdminPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // State for the test score form
-  const [testName, setTestName] = useState('');
-  const [testScore, setTestScore] = useState('');
+  // State for the score form
+  const [playerName, setPlayerName] = useState('');
+  const [playerScore, setPlayerScore] = useState('');
   const [selectedGamemode, setSelectedGamemode] = useState('');
   const [newGamemode, setNewGamemode] = useState('');
   const [isAddingNewGamemode, setIsAddingNewGamemode] = useState(false);
@@ -72,7 +72,7 @@ const AdminPage = () => {
     }
   };
 
-  const handleAddTestScore = async (e: React.FormEvent) => {
+  const handleAddScore = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const gamemodeToSubmit = isAddingNewGamemode ? newGamemode.trim().toLowerCase().replace(/\s+/g, '-') : selectedGamemode;
@@ -86,12 +86,12 @@ const AdminPage = () => {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/admin/add-test-score', {
+      const response = await fetch('/api/admin/add-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: testName,
-          score: parseInt(testScore, 10),
+          name: playerName,
+          score: parseInt(playerScore, 10),
           gamemode: gamemodeToSubmit,
         }),
       });
@@ -99,10 +99,10 @@ const AdminPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({ type: 'success', text: `Test score for ${testName} added successfully!` });
+        setMessage({ type: 'success', text: `Score for ${playerName} added successfully!` });
         // Clear form
-        setTestName('');
-        setTestScore('');
+        setPlayerName('');
+        setPlayerScore('');
         setNewGamemode('');
         if (isAddingNewGamemode) {
           mutate('/api/get-gamemodes'); // Re-fetch gamemodes if a new one was added
@@ -194,25 +194,25 @@ const AdminPage = () => {
                   </button>
                 </div>
 
-                {/* --- Add Test Score Section --- */}
+                {/* --- Add Score Section --- */}
                 <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                   <h2 className="flex items-center gap-2 text-xl font-bold text-cyan-400 font-mono mb-4">
                     <PlusCircle />
-                    Add Test Score
+                    Add Score
                   </h2>
-                  <form onSubmit={handleAddTestScore} className="space-y-4">
+                  <form onSubmit={handleAddScore} className="space-y-4">
                     <input
                       type="text"
-                      value={testName}
-                      onChange={(e) => setTestName(e.target.value)}
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
                       placeholder="Player Name"
                       required
                       className="w-full bg-gray-800 border-2 border-gray-600 rounded-lg p-3 text-white font-mono focus:outline-none focus:ring-2 focus:ring-cyan-400"
                     />
                     <input
                       type="number"
-                      value={testScore}
-                      onChange={(e) => setTestScore(e.target.value)}
+                      value={playerScore}
+                      onChange={(e) => setPlayerScore(e.target.value)}
                       placeholder="Score"
                       required
                       className="w-full bg-gray-800 border-2 border-gray-600 rounded-lg p-3 text-white font-mono focus:outline-none focus:ring-2 focus:ring-cyan-400"
